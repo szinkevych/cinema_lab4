@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Клієнти · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Клієнти</h1>
+    <a class="btn btn-primary" href="{{ url_for('customers.add_customer') }}">+ Додати клієнта</a>
+</div>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="q">Пошук</label>
+        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Ім'я, прізвище, email або телефон">
+    </div>
+    <div class="form-group">
+        <label for="sort">Сортувати за</label>
+        <select id="sort" name="sort">
+            <option value="name" {{ 'selected' if filters.sort == 'name' }}>Прізвищем</option>
+            <option value="email" {{ 'selected' if filters.sort == 'email' }}>Email</option>
+            <option value="tickets" {{ 'selected' if filters.sort == 'tickets' }}>Кількістю квитків</option>
+            <option value="spent" {{ 'selected' if filters.sort == 'spent' }}>Витраченою сумою</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="order">Порядок</label>
+        <select id="order" name="order">
+            <option value="asc" {{ 'selected' if filters.order == 'asc' }}>За зростанням</option>
+            <option value="desc" {{ 'selected' if filters.order == 'desc' }}>За спаданням</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Знайти</button>
+        <a href="{{ url_for('customers.list_customers') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="muted">Знайдено клієнтів: {{ customers | length }}</p>
+
+{% if customers %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Клієнт</th><th>Email</th><th>Телефон</th><th>Квитків</th><th>Витрачено</th><th>Дії</th></tr></thead>
+        <tbody>
+        {% for c in customers %}
+            <tr>
+                <td><a href="{{ url_for('customers.customer_detail', customer_id=c.customer_id) }}">{{ c.last_name }} {{ c.first_name }}</a></td>
+                <td>{{ c.email }}</td>
+                <td>{{ c.phone or '—' }}</td>
+                <td>{{ c.tickets_count }}</td>
+                <td>{{ c.total_spent | money }}</td>
+                <td class="actions">
+                    <a class="btn btn-small" href="{{ url_for('customers.edit_customer', customer_id=c.customer_id) }}">Змінити</a>
+                    <form method="post" action="{{ url_for('customers.delete_customer', customer_id=c.customer_id) }}"
+                          data-msg="Видалити клієнта {{ c.last_name }} {{ c.first_name }}?" onsubmit="return confirm(this.dataset.msg)">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-danger">Видалити</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">Клієнтів за вашим запитом не знайдено.</p></div>
+{% endif %}
+{% endblock %}

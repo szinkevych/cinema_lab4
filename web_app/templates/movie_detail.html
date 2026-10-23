@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ movie.title }}</h1>
+    <div class="actions">
+        <a class="btn" href="{{ url_for('movies.list_movies') }}">← До списку</a>
+        <a class="btn btn-warning" href="{{ url_for('movies.edit_movie', movie_id=movie.movie_id) }}">Змінити</a>
+    </div>
+</div>
+
+<div class="panel">
+    <p>
+        <span class="badge badge-info">{{ movie.age_rating }}+</span>
+        {{ movie.release_year }} · {{ movie.duration_min }} хв
+    </p>
+    <p style="margin-top:0.6rem">
+        {% for g in genres %}<span class="badge badge-ok">{{ g.name }}</span> {% else %}<span class="muted">Жанри не вказано</span>{% endfor %}
+    </p>
+    <p style="margin-top:0.9rem">{{ movie.description or 'Опису немає.' }}</p>
+</div>
+
+<h2>Сеанси</h2>
+{% if screenings %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Початок</th><th>Зал</th><th>Заповненість</th><th></th></tr></thead>
+        <tbody>
+        {% for s in screenings %}
+            <tr>
+                <td>{{ s.start_time | dt }}</td>
+                <td>{{ s.hall }}</td>
+                <td>
+                    <div class="bar"><div class="bar-fill" style="width: {{ s.occupancy_pct }}%"></div></div>
+                    <small>{{ s.sold_seats }} з {{ s.total_seats }}</small>
+                </td>
+                <td>{% if s.start_time < now() %}<span class="badge badge-off">минув</span>{% else %}<span class="badge badge-ok">очікується</span>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">Сеансів для цього фільму немає.</p></div>
+{% endif %}
+{% endblock %}

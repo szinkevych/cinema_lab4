@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Звіти · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header"><h1>Звіти</h1></div>
+
+<h2>Виручка по залах за період</h2>
+<form method="get" class="panel filters">
+    <div class="form-group {{ 'has-error' if errors.get('from') }}">
+        <label for="from">Від</label>
+        <input type="date" id="from" name="from" value="{{ form_values['from'] }}">
+        {% if errors.get('from') %}<div class="field-error">{{ errors['from'] }}</div>{% endif %}
+    </div>
+    <div class="form-group {{ 'has-error' if errors.get('to') }}">
+        <label for="to">До</label>
+        <input type="date" id="to" name="to" value="{{ form_values['to'] }}">
+        {% if errors.get('to') %}<div class="field-error">{{ errors['to'] }}</div>{% endif %}
+    </div>
+    <div class="form-group"><button type="submit" class="btn btn-primary">Сформувати</button></div>
+</form>
+
+{% if not errors %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Зал</th><th>Тип</th><th>Сеансів</th><th>Продано квитків</th><th>Виручка</th></tr></thead>
+        <tbody>
+        {% for h in halls %}
+            <tr>
+                <td>{{ h.hall_name }}</td>
+                <td><span class="badge badge-info">{{ h.hall_kind }}</span></td>
+                <td>{{ h.screenings_count }}</td>
+                <td>{{ h.tickets_sold }}</td>
+                <td>
+                    {{ h.revenue | money }}
+                    <div class="bar"><div class="bar-fill" style="width: {{ h.share }}%"></div></div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr><th colspan="4">Разом за {{ date_from }} — {{ date_to }}</th><th>{{ halls_total | money }}</th></tr></tfoot>
+    </table>
+</div>
+{% endif %}
+
+<h2>Виручка по фільмах</h2>
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Фільм</th><th>Продано квитків</th><th>Виручка</th></tr></thead>
+        <tbody>
+        {% for m in movies %}
+            <tr><td>{{ m.title }}</td><td>{{ m.tickets_sold }}</td><td>{{ m.revenue | money }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2>Виручка по днях</h2>
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Дата сеансу</th><th>Квитків</th><th>Виручка</th><th>Наростаючим підсумком</th></tr></thead>
+        <tbody>
+        {% for d in days %}
+            <tr><td>{{ d.day }}</td><td>{{ d.tickets }}</td><td>{{ d.revenue | money }}</td><td>{{ d.running_total | money }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

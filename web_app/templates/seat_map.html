@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Квитки на сеанс №{{ screening.screening_id }} · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ screening.title }}</h1>
+    <a class="btn" href="{{ url_for('screenings.list_screenings') }}">← До розкладу</a>
+</div>
+
+<div class="panel">
+    <p>
+        <strong>{{ screening.start_time | dt }}</strong> · {{ screening.hall }}
+        <span class="badge badge-info">{{ screening.hall_type }}</span>
+        · базова ціна {{ screening.base_price | money }}
+    </p>
+    <p class="muted" style="margin-top:0.3rem">Продано місць: {{ sold_seats }} з {{ total_seats }}</p>
+    {% if closed %}<p style="margin-top:0.5rem"><span class="badge badge-off">Сеанс уже розпочався, продаж закрито</span></p>{% endif %}
+</div>
+
+<form method="post" novalidate id="sell-form" data-price="{{ screening.base_price }}" data-max="{{ max_seats }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <h2>Схема залу</h2>
+    {% if form_errors.get('seats') %}<div class="alert alert-error"><span>{{ form_errors['seats'] }}</span></div>{% endif %}
+
+    <div class="panel seatmap">
+        <div class="screen-label">ЕКРАН</div>
+        {% for row, seats in layout.items() %}
+        <div class="seat-row">
+            <span class="row-label">{{ row }}</span>
+            {% for s in seats %}
+            <label class="seat" title="Ряд {{ row }}, місце {{ s.seat_number }}{{ ' (продано)' if s.sold }}">
+                <input type="checkbox" name="seats" value="{{ row }}:{{ s.seat_number }}"
+                       {{ 'disabled' if s.sold or closed }}
+                       {{ 'checked' if (not s.sold) and ((row ~ ':' ~ s.seat_number) in selected) }}>
+                <span>{{ s.seat_number }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <div class="legend">
+            <span><i class="seat-sample free"></i> вільно</span>
+            <span><i class="seat-sample chosen"></i> обрано</span>
+            <span><i class="seat-sample taken"></i> продано</span>
+        </div>
+    </div>
+
+    {% if not closed %}
+    <h2>Оформлення</h2>
+    <div class="panel form-panel">
+        <div class="form-group {{ 'has-error' if form_errors.get('customer_id') }}">
+            <label for="customer_id">Клієнт *</label>
+            <select id="customer_id" name="customer_id" required>
+                <option value="">— оберіть клієнта —</option>
+                {% for c in customers %}
+                    <option value="{{ c.customer_id }}" {{ 'selected' if values.get('customer_id')|string == c.customer_id|string }}>
+                        {{ c.last_name }} {{ c.first_name }} ({{ c.email }})
+                    </option>
+                {% endfor %}
+            </select>
+            {% if form_errors.get('customer_id') %}<div class="field-error">{{ form_errors['customer_id'] }}</div>{% endif %}
+            <div class="hint">Немає в списку? <a href="{{ url_for('customers.add_customer') }}">Додати клієнта</a></div>
+        </div>
+
+        <div class="form-group {{ 'has-error' if form_errors.get('ticket_type') }}">
+            <label for="ticket_type">Тип квитка *</label>
+            <select id="ticket_type" name="ticket_type">
+                {% for key, (label, coef) in ticket_types.items() %}
+                    <option value="{{ key }}" data-coef="{{ coef }}" {{ 'selected' if values.get('ticket_type') == key }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if form_errors.get('ticket_type') %}<div class="field-error">{{ form_errors['ticket_type'] }}</div>{% endif %}
+        </div>
+
+        <div class="order-summary" id="summary">Місця не обрано</div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Продати</button>
+        </div>
+    </div>
+    {% endif %}
+</form>
+
+<script>
+    // Лише підказка: кількість обраних місць і сума. Остаточну ціну рахує процедура в базі.
+    (function () {
+        var form = document.getElementById('sell-form');
+        var summary = document.getElementById('summary');
+        if (!summary) return;
+        var base = parseFloat(form.dataset.price);
+        var max = parseInt(form.dataset.max, 10);
+        var type = document.getElementById('ticket_type');
+        function update() {
+            var boxes = form.querySelectorAll('input[name="seats"]:checked');
+            var n = boxes.length;
+            if (n > max) {
+                boxes[boxes.length - 1].checked = false;
+                alert('В одному замовленні не більше ' + max + ' місць.');
+                n = max;
+            }
+            if (n === 0) { summary.textContent = 'Місця не обрано'; return; }
+            var coef = parseFloat(type.options[type.selectedIndex].dataset.coef);
+            var names = Array.prototype.map.call(form.querySelectorAll('input[name="seats"]:checked'), function (b) {
+                var p = b.value.split(':'); return 'ряд ' + p[0] + ', місце ' + p[1];
+            });
+            summary.textContent = 'Обрано: ' + names.join('; ') + '. До сплати: ' + (n * base * coef).toFixed(2) + ' грн';
+        }
+        form.addEventListener('change', update);
+        update();
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header"><h1>{{ heading }}</h1></div>
+
+<form method="post" class="panel form-panel" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <div class="form-group {{ 'has-error' if form_errors.get('movie_id') }}">
+        <label for="movie_id">Фільм *</label>
+        <select id="movie_id" name="movie_id" required>
+            <option value="">— оберіть фільм —</option>
+            {% for m in movies %}
+                <option value="{{ m.movie_id }}" {{ 'selected' if values.get('movie_id')|string == m.movie_id|string }}>
+                    {{ m.title }} ({{ m.duration_min }} хв)
+                </option>
+            {% endfor %}
+        </select>
+        {{ field_error('movie_id') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('hall_id') }}">
+        <label for="hall_id">Зал *</label>
+        {% if hall_locked %}
+            {% for h in halls if h.hall_id|string == values.get('hall_id')|string %}
+                <input type="text" value="{{ h.name }} ({{ h.hall_type }})" disabled>
+            {% endfor %}
+            <input type="hidden" name="hall_id" value="{{ values.get('hall_id') }}">
+            <div class="hint">На цей сеанс уже є квитки, тому зал змінити не можна.</div>
+        {% else %}
+            <select id="hall_id" name="hall_id" required>
+                <option value="">— оберіть зал —</option>
+                {% for h in halls %}
+                    <option value="{{ h.hall_id }}" {{ 'selected' if values.get('hall_id')|string == h.hall_id|string }}>
+                        {{ h.name }} ({{ h.hall_type }})
+                    </option>
+                {% endfor %}
+            </select>
+        {% endif %}
+        {{ field_error('hall_id') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('start_time') }}">
+        <label for="start_time">Початок *</label>
+        <input type="datetime-local" id="start_time" name="start_time" value="{{ values.get('start_time', '') }}" required>
+        <div class="hint">Сеанси в одному залі не можуть перетинатися (враховується тривалість фільму й 15 хвилин на прибирання).</div>
+        {{ field_error('start_time') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('base_price') }}">
+        <label for="base_price">Базова ціна квитка, грн *</label>
+        <input type="text" id="base_price" name="base_price" inputmode="decimal" value="{{ values.get('base_price', '') }}" required>
+        {{ field_error('base_price') }}
+    </div>
+
+    <div class="form-actions">
+        <a class="btn" href="{{ url_for('screenings.list_screenings') }}">Скасувати</a>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </div>
+</form>
+{% endblock %}

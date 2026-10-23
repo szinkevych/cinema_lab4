@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Сеанси · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Сеанси</h1>
+    <a class="btn btn-primary" href="{{ url_for('screenings.add_screening') }}">+ Додати сеанс</a>
+</div>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="when">Період</label>
+        <select id="when" name="when">
+            <option value="upcoming" {{ 'selected' if filters.when == 'upcoming' }}>Майбутні</option>
+            <option value="today" {{ 'selected' if filters.when == 'today' }}>Сьогодні</option>
+            <option value="past" {{ 'selected' if filters.when == 'past' }}>Минулі</option>
+            <option value="all" {{ 'selected' if filters.when == 'all' }}>Усі</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="movie">Фільм</label>
+        <select id="movie" name="movie">
+            <option value="">Усі фільми</option>
+            {% for m in movies %}
+                <option value="{{ m.movie_id }}" {{ 'selected' if filters.movie == m.movie_id }}>{{ m.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="hall">Зал</label>
+        <select id="hall" name="hall">
+            <option value="">Усі зали</option>
+            {% for h in halls %}
+                <option value="{{ h.hall_id }}" {{ 'selected' if filters.hall == h.hall_id }}>{{ h.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Показати</button>
+        <a href="{{ url_for('screenings.list_screenings') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="muted">Знайдено сеансів: {{ screenings | length }}</p>
+
+{% if screenings %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>№</th><th>Початок</th><th>Фільм</th><th>Зал</th><th>Ціна</th><th>Заповненість</th><th>Дії</th></tr></thead>
+        <tbody>
+        {% for s in screenings %}
+            <tr>
+                <td>{{ s.screening_id }}</td>
+                <td>{{ s.start_time | dt }}{% if s.start_time < now %} <span class="badge badge-off">минув</span>{% endif %}</td>
+                <td><a href="{{ url_for('movies.movie_detail', movie_id=s.movie_id) }}">{{ s.title }}</a></td>
+                <td>{{ s.hall }} <span class="badge badge-info">{{ s.hall_type }}</span></td>
+                <td>{{ s.base_price | money }}</td>
+                <td>
+                    <div class="bar"><div class="bar-fill" style="width: {{ s.occupancy_pct }}%"></div></div>
+                    <small>{{ s.sold_seats }} з {{ s.total_seats }}</small>
+                </td>
+                <td class="actions">
+                    <a class="btn btn-small btn-primary" href="{{ url_for('tickets.sell_tickets', screening_id=s.screening_id) }}">Квитки</a>
+                    {% if s.start_time >= now %}
+                    <a class="btn btn-small" href="{{ url_for('screenings.edit_screening', screening_id=s.screening_id) }}">Змінити</a>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('screenings.delete_screening', screening_id=s.screening_id) }}"
+                          data-msg="Видалити сеанс №{{ s.screening_id }}?" onsubmit="return confirm(this.dataset.msg)">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-danger">Видалити</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">Сеансів за цими умовами немає.</p></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header"><h1>{{ heading }}</h1></div>
+
+<form method="post" class="panel form-panel" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <div class="form-group {{ 'has-error' if form_errors.get('title') }}">
+        <label for="title">Назва *</label>
+        <input type="text" id="title" name="title" maxlength="200" value="{{ values.get('title', '') }}" required>
+        {{ field_error('title') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('description') }}">
+        <label for="description">Опис</label>
+        <textarea id="description" name="description" rows="4" maxlength="2000">{{ values.get('description', '') }}</textarea>
+        {{ field_error('description') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('duration_min') }}">
+        <label for="duration_min">Тривалість, хв *</label>
+        <input type="number" id="duration_min" name="duration_min" min="1" max="600"
+               value="{{ values.get('duration_min', '') }}" required>
+        {{ field_error('duration_min') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('release_year') }}">
+        <label for="release_year">Рік випуску *</label>
+        <input type="number" id="release_year" name="release_year" min="1888"
+               value="{{ values.get('release_year', '') }}" required>
+        {{ field_error('release_year') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('age_rating') }}">
+        <label for="age_rating">Віковий рейтинг *</label>
+        <select id="age_rating" name="age_rating" required>
+            {% for r in ratings %}
+                <option value="{{ r }}" {{ 'selected' if values.get('age_rating')|string == r|string }}>{{ r }}+</option>
+            {% endfor %}
+        </select>
+        {{ field_error('age_rating') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('genres') }}">
+        <label>Жанри</label>
+        <div class="checkbox-list">
+            {% for g in genres %}
+                <label><input type="checkbox" name="genres" value="{{ g.genre_id }}"
+                              {{ 'checked' if g.genre_id in selected_genres }}> {{ g.name }}</label>
+            {% endfor %}
+        </div>
+        {{ field_error('genres') }}
+    </div>
+
+    <div class="form-actions">
+        <a class="btn" href="{{ url_for('movies.list_movies') }}">Скасувати</a>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </div>
+</form>
+{% endblock %}

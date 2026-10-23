@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header"><h1>{{ heading }}</h1></div>
+
+<form method="post" class="panel form-panel" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <div class="form-group {{ 'has-error' if form_errors.get('first_name') }}">
+        <label for="first_name">Ім'я *</label>
+        <input type="text" id="first_name" name="first_name" maxlength="50" value="{{ values.get('first_name', '') }}" required>
+        {{ field_error('first_name') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('last_name') }}">
+        <label for="last_name">Прізвище *</label>
+        <input type="text" id="last_name" name="last_name" maxlength="50" value="{{ values.get('last_name', '') }}" required>
+        {{ field_error('last_name') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('email') }}">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" maxlength="100" value="{{ values.get('email', '') }}" required>
+        {{ field_error('email') }}
+    </div>
+
+    <div class="form-group {{ 'has-error' if form_errors.get('phone') }}">
+        <label for="phone">Телефон</label>
+        <input type="text" id="phone" name="phone" maxlength="25" value="{{ values.get('phone', '') }}" placeholder="+380501234567">
+        <div class="hint">Необов'язково. Пробіли й дефіси можна використовувати, їх буде прибрано.</div>
+        {{ field_error('phone') }}
+    </div>
+
+    <div class="form-actions">
+        <a class="btn" href="{{ url_for('customers.list_customers') }}">Скасувати</a>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </div>
+</form>
+{% endblock %}

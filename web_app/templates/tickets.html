@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Квитки · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Квитки</h1>
+    <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">+ Продати квиток (обрати сеанс)</a>
+</div>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="q">Пошук</label>
+        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Фільм або клієнт">
+    </div>
+    <div class="form-group">
+        <label for="status">Статус</label>
+        <select id="status" name="status">
+            <option value="" {{ 'selected' if filters.status == '' }}>Усі</option>
+            <option value="sold" {{ 'selected' if filters.status == 'sold' }}>Діють</option>
+            <option value="cancelled" {{ 'selected' if filters.status == 'cancelled' }}>Скасовані</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="when">Сеанс</label>
+        <select id="when" name="when">
+            <option value="all" {{ 'selected' if filters.when == 'all' }}>Будь-який</option>
+            <option value="upcoming" {{ 'selected' if filters.when == 'upcoming' }}>Майбутні</option>
+            <option value="past" {{ 'selected' if filters.when == 'past' }}>Минулі</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Знайти</button>
+        <a href="{{ url_for('tickets.list_tickets') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="muted">Знайдено квитків: {{ tickets | length }} · сума активних: {{ total | money }}</p>
+
+{% if tickets %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>№</th><th>Фільм</th><th>Зал</th><th>Початок</th><th>Місце</th><th>Клієнт</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {% for t in tickets %}
+            <tr>
+                <td>{{ t.ticket_id }}</td>
+                <td>{{ t.movie }}</td>
+                <td>{{ t.hall }}</td>
+                <td>{{ t.start_time | dt }}</td>
+                <td>ряд {{ t.row_number }}, місце {{ t.seat_number }}</td>
+                <td>{{ t.customer }}</td>
+                <td>{{ t.price | money }}</td>
+                <td>{% if t.status == 'sold' %}<span class="badge badge-ok">діє</span>{% else %}<span class="badge badge-off">скасовано</span>{% endif %}</td>
+                <td class="actions">
+                    {% if t.cancelable %}
+                    <form method="post" action="{{ url_for('tickets.cancel_ticket', ticket_id=t.ticket_id) }}"
+                          data-msg="Скасувати квиток №{{ t.ticket_id }}?" onsubmit="return confirm(this.dataset.msg)">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-danger">Скасувати</button>
+                    </form>
+                    {% elif t.status == 'sold' %}
+                        <small class="muted">менше години до початку</small>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">Квитків за цими умовами немає.</p></div>
+{% endif %}
+{% endblock %}

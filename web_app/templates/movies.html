@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Фільми · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Фільми</h1>
+    <a class="btn btn-primary" href="{{ url_for('movies.add_movie') }}">+ Додати фільм</a>
+</div>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="q">Пошук за назвою</label>
+        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Наприклад, дюна">
+    </div>
+    <div class="form-group">
+        <label for="genre">Жанр</label>
+        <select id="genre" name="genre">
+            <option value="">Усі жанри</option>
+            {% for g in genres %}
+                <option value="{{ g.genre_id }}" {{ 'selected' if filters.genre == g.genre_id }}>{{ g.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="age">Вік не більше</label>
+        <select id="age" name="age">
+            <option value="">Будь-який</option>
+            {% for r in ratings %}
+                <option value="{{ r }}" {{ 'selected' if filters.age == r }}>{{ r }}+</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="sort">Сортувати за</label>
+        <select id="sort" name="sort">
+            <option value="title" {{ 'selected' if filters.sort == 'title' }}>Назвою</option>
+            <option value="year" {{ 'selected' if filters.sort == 'year' }}>Роком</option>
+            <option value="duration" {{ 'selected' if filters.sort == 'duration' }}>Тривалістю</option>
+            <option value="rating" {{ 'selected' if filters.sort == 'rating' }}>Віком</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="order">Порядок</label>
+        <select id="order" name="order">
+            <option value="asc" {{ 'selected' if filters.order == 'asc' }}>За зростанням</option>
+            <option value="desc" {{ 'selected' if filters.order == 'desc' }}>За спаданням</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Знайти</button>
+        <a href="{{ url_for('movies.list_movies') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="muted">Знайдено фільмів: {{ movies | length }}</p>
+
+{% if movies %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr><th>Назва</th><th>Рік</th><th>Хв</th><th>Вік</th><th>Жанри</th><th>Майбутні сеанси</th><th>Дії</th></tr>
+        </thead>
+        <tbody>
+        {% for m in movies %}
+            <tr>
+                <td><a href="{{ url_for('movies.movie_detail', movie_id=m.movie_id) }}">{{ m.title }}</a></td>
+                <td>{{ m.release_year }}</td>
+                <td>{{ m.duration_min }}</td>
+                <td><span class="badge badge-info">{{ m.age_rating }}+</span></td>
+                <td>{{ m.genres or '—' }}</td>
+                <td>{{ m.upcoming }}</td>
+                <td class="actions">
+                    <a class="btn btn-small" href="{{ url_for('movies.edit_movie', movie_id=m.movie_id) }}">Змінити</a>
+                    <form method="post" action="{{ url_for('movies.delete_movie', movie_id=m.movie_id) }}"
+                          data-msg="Видалити фільм «{{ m.title }}»?" onsubmit="return confirm(this.dataset.msg)">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-danger">Видалити</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">За вашим запитом фільмів не знайдено.</p></div>
+{% endif %}
+{% endblock %}

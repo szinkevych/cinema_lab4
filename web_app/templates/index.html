@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Головна · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header"><h1>Панель кінотеатру</h1></div>
+
+<div class="cards">
+    <div class="card"><div class="card-value">{{ stats.movies }}</div><div class="card-label">Фільмів у каталозі</div></div>
+    <div class="card"><div class="card-value">{{ stats.upcoming }}</div><div class="card-label">Майбутніх сеансів</div></div>
+    <div class="card"><div class="card-value">{{ stats.tickets_sold }}</div><div class="card-label">Продано квитків</div></div>
+    <div class="card"><div class="card-value">{{ stats.revenue | money }}</div><div class="card-label">Виручка</div></div>
+    <div class="card"><div class="card-value">{{ stats.customers }}</div><div class="card-label">Клієнтів</div></div>
+</div>
+
+<h2>Розклад на сьогодні</h2>
+{% if today %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Початок</th><th>Фільм</th><th>Зал</th><th>Заповненість</th></tr></thead>
+        <tbody>
+        {% for s in today %}
+            <tr>
+                <td>{{ s.start_time.strftime('%H:%M') }}</td>
+                <td>{{ s.title }}</td>
+                <td>{{ s.hall }}</td>
+                <td>
+                    <div class="bar"><div class="bar-fill" style="width: {{ s.occupancy_pct }}%"></div></div>
+                    <small>{{ s.sold_seats }} з {{ s.total_seats }} ({{ s.occupancy_pct }}%)</small>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel"><p class="muted">На сьогодні сеансів немає.</p></div>
+{% endif %}
+{% endblock %}
