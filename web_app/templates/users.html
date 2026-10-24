@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Користувачі · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header"><h1>Користувачі</h1></div>
+
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Логін</th><th>Email</th><th>Профіль клієнта</th><th>Роль</th><th></th></tr></thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.username }}{% if u.user_id == current_user.user_id %} <span class="badge badge-ok">це ви</span>{% endif %}</td>
+                <td>{{ u.email }}</td>
+                <td>{% if u.customer_id %}<a href="{{ url_for('customers.customer_detail', customer_id=u.customer_id) }}">{{ u.customer_name }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td>
+                    {% if u.user_id == current_user.user_id %}
+                        {{ role_labels[u.role] }}
+                    {% else %}
+                    <form method="post" action="{{ url_for('users.change_role', user_id=u.user_id) }}" class="inline-form">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <select name="role" aria-label="Роль користувача {{ u.username }}">
+                            {% for key, label in role_labels.items() %}
+                                <option value="{{ key }}" {{ 'selected' if u.role == key }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-small">Зберегти</button>
+                    </form>
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    {% if u.user_id != current_user.user_id %}
+                    <form method="post" action="{{ url_for('users.delete_user', user_id=u.user_id) }}"
+                          data-msg="Видалити користувача {{ u.username }}?" onsubmit="return confirm(this.dataset.msg)">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small btn-danger">Видалити</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2>Створити обліковий запис співробітника</h2>
+<form method="post" class="panel form-panel" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-group {{ 'has-error' if form_errors.get('username') }}">
+        <label for="username">Логін *</label>
+        <input type="text" id="username" name="username" maxlength="30" value="{{ values.get('username', '') }}" required>
+        {{ field_error('username') }}
+    </div>
+    <div class="form-group {{ 'has-error' if form_errors.get('email') }}">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" maxlength="100" value="{{ values.get('email', '') }}" required>
+        {{ field_error('email') }}
+    </div>
+    <div class="form-group {{ 'has-error' if form_errors.get('role') }}">
+        <label for="role">Роль *</label>
+        <select id="role" name="role">
+            <option value="cashier" {{ 'selected' if values.get('role') != 'admin' }}>{{ role_labels['cashier'] }}</option>
+            <option value="admin" {{ 'selected' if values.get('role') == 'admin' }}>{{ role_labels['admin'] }}</option>
+        </select>
+        {{ field_error('role') }}
+    </div>
+    <div class="form-group {{ 'has-error' if form_errors.get('password') }}">
+        <label for="password">Пароль *</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" required>
+        <div class="hint">Щонайменше 8 символів, літери й цифри.</div>
+        {{ field_error('password') }}
+    </div>
+    <div class="form-actions"><button type="submit" class="btn btn-primary">Створити</button></div>
+</form>
+{% endblock %}

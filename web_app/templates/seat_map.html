@@ -48,6 +48,9 @@
     {% if not closed %}
     <h2>Оформлення</h2>
     <div class="panel form-panel">
+        {% if own_customer %}
+        <p style="margin-bottom:1rem">Квитки оформлюються на: <strong>{{ own_customer.first_name }} {{ own_customer.last_name }}</strong></p>
+        {% else %}
         <div class="form-group {{ 'has-error' if form_errors.get('customer_id') }}">
             <label for="customer_id">Клієнт *</label>
             <select id="customer_id" name="customer_id" required>
@@ -61,6 +64,7 @@
             {% if form_errors.get('customer_id') %}<div class="field-error">{{ form_errors['customer_id'] }}</div>{% endif %}
             <div class="hint">Немає в списку? <a href="{{ url_for('customers.add_customer') }}">Додати клієнта</a></div>
         </div>
+        {% endif %}
 
         <div class="form-group {{ 'has-error' if form_errors.get('ticket_type') }}">
             <label for="ticket_type">Тип квитка *</label>

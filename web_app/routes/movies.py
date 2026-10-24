@@ -4,6 +4,7 @@ from datetime import date
 import psycopg2
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
+from auth import roles_required
 from database import db_error_message, execute, query_all, query_one, transaction
 from validators import get_choice, get_int, get_text
 
@@ -106,6 +107,7 @@ def movie_detail(movie_id):
 
 
 @bp.route("/add", methods=["GET", "POST"])
+@roles_required("admin")
 def add_movie():
     genres = load_genres()
     if request.method == "POST":
@@ -138,6 +140,7 @@ def add_movie():
 
 
 @bp.route("/<int:movie_id>/edit", methods=["GET", "POST"])
+@roles_required("admin")
 def edit_movie(movie_id):
     movie = query_one("SELECT * FROM movies WHERE movie_id = %s", (movie_id,))
     if movie is None:
@@ -180,6 +183,7 @@ def edit_movie(movie_id):
 
 
 @bp.route("/<int:movie_id>/delete", methods=["POST"])
+@roles_required("admin")
 def delete_movie(movie_id):
     movie = query_one("SELECT title FROM movies WHERE movie_id = %s", (movie_id,))
     if movie is None:

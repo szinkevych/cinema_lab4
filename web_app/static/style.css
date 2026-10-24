@@ -161,3 +161,16 @@ h2 { font-size: 1.2rem; margin: 1.75rem 0 0.75rem; }
 .seat-sample.taken { background: #cfd6de; border-color: #cfd6de; }
 .order-summary { background: #eef2f6; border-radius: 8px; padding: 0.8rem 1rem; font-weight: 500; }
 tfoot th { text-align: left; padding: 0.7rem 1rem; background: #eef2f6; border-top: 1px solid var(--border); }
+
+/* Вхід, реєстрація, користувачі, журнал */
+.auth-panel { margin: 1.5rem auto; }
+.btn-block { display: block; width: 100%; }
+.user-box { display: flex; align-items: center; gap: 0.6rem; color: #c9d3de; }
+.user-box a { color: #c9d3de; text-decoration: none; padding: 0.3rem 0.5rem; }
+.user-box a:hover { color: #fff; }
+.user-box form { display: inline; }
+.inline-form { display: flex; gap: 0.4rem; align-items: center; }
+.inline-form select { padding: 0.3rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+.nowrap { white-space: nowrap; }
+.details { font-size: 0.8rem; color: var(--muted); word-break: break-all; }
+.pager { display: flex; gap: 0.6rem; justify-content: center; margin: 1rem 0; }

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Журнал дій · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="page-header"><h1>Журнал дій</h1></div>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="user">Користувач</label>
+        <select id="user" name="user">
+            <option value="">Усі</option>
+            {% for u in users %}<option value="{{ u.user_id }}" {{ 'selected' if filters.user == u.user_id }}>{{ u.username }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="table">Таблиця</label>
+        <select id="table" name="table">
+            <option value="">Усі</option>
+            {% for t in tables %}<option value="{{ t }}" {{ 'selected' if filters.table == t }}>{{ t }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="action">Дія</label>
+        <select id="action" name="action">
+            <option value="">Усі</option>
+            {% for a in actions %}<option value="{{ a }}" {{ 'selected' if filters.action == a }}>{{ a }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Показати</button>
+        <a href="{{ url_for('activity.list_activity') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="muted">Записів: {{ total }} · сторінка {{ page }} з {{ pages }}</p>
+
+{% if rows %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead><tr><th>Час</th><th>Користувач</th><th>Дія</th><th>Таблиця</th><th>Запис</th><th>Подробиці</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td class="nowrap">{{ r.created_at | dt }}</td>
+                <td>{{ r.username or '—' }}</td>
+                <td><span class="badge {{ 'badge-off' if r.action in ('DELETE', 'LOGIN_FAILED', 'CANCEL_TICKET') else 'badge-info' }}">{{ r.action }}</span></td>
+                <td>{{ r.table_name or '—' }}</td>
+                <td>{{ r.record_id if r.record_id is not none else '—' }}</td>
+                <td><code class="details" title="{{ r.details or '' }}">{{ (r.details or '')[:140] }}{{ '…' if r.details and r.details|length > 140 }}</code></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="pager">
+    {% if page > 1 %}<a class="btn btn-small" href="{{ url_for('activity.list_activity', page=page-1, user=filters.user, table=filters.table, action=filters.action) }}">← Новіші</a>{% endif %}
+    {% if page < pages %}<a class="btn btn-small" href="{{ url_for('activity.list_activity', page=page+1, user=filters.user, table=filters.table, action=filters.action) }}">Старіші →</a>{% endif %}
+</div>
+{% else %}
+<div class="panel"><p class="muted">Записів за цими умовами немає.</p></div>
+{% endif %}
+{% endblock %}

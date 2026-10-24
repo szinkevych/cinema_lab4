@@ -16,6 +16,19 @@
                        class="{{ 'active' if current_endpoint and current_endpoint.split('.')[0] == endpoint.split('.')[0] else '' }}">{{ label }}</a>
                 {% endfor %}
             </nav>
+            <div class="user-box">
+                {% if current_user %}
+                    <span>{{ current_user.username }}</span>
+                    <span class="badge badge-info">{{ role_labels[current_user.role] }}</span>
+                    <form method="post" action="{{ url_for('auth.logout') }}">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-small">Вийти</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}">Вхід</a>
+                    <a href="{{ url_for('auth.register') }}">Реєстрація</a>
+                {% endif %}
+            </div>
         </div>
     </header>
 

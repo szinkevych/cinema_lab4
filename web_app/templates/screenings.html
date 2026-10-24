@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <h1>Сеанси</h1>
-    <a class="btn btn-primary" href="{{ url_for('screenings.add_screening') }}">+ Додати сеанс</a>
+    {% if current_user.role == 'admin' %}<a class="btn btn-primary" href="{{ url_for('screenings.add_screening') }}">+ Додати сеанс</a>{% endif %}
 </div>
 
 <form method="get" class="panel filters">
@@ -61,14 +61,14 @@
                 </td>
                 <td class="actions">
                     <a class="btn btn-small btn-primary" href="{{ url_for('tickets.sell_tickets', screening_id=s.screening_id) }}">Квитки</a>
-                    {% if s.start_time >= now %}
+                    {% if current_user.role == 'admin' and s.start_time >= now %}
                     <a class="btn btn-small" href="{{ url_for('screenings.edit_screening', screening_id=s.screening_id) }}">Змінити</a>
                     {% endif %}
-                    <form method="post" action="{{ url_for('screenings.delete_screening', screening_id=s.screening_id) }}"
+                    {% if current_user.role == 'admin' %}<form method="post" action="{{ url_for('screenings.delete_screening', screening_id=s.screening_id) }}"
                           data-msg="Видалити сеанс №{{ s.screening_id }}?" onsubmit="return confirm(this.dataset.msg)">
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-small btn-danger">Видалити</button>
-                    </form>
+                    </form>{% endif %}
                 </td>
             </tr>
         {% endfor %}

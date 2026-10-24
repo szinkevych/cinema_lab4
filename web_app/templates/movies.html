@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <h1>Фільми</h1>
-    <a class="btn btn-primary" href="{{ url_for('movies.add_movie') }}">+ Додати фільм</a>
+    {% if current_user.role == 'admin' %}<a class="btn btn-primary" href="{{ url_for('movies.add_movie') }}">+ Додати фільм</a>{% endif %}
 </div>
 
 <form method="get" class="panel filters">
@@ -58,7 +58,7 @@
 <div class="table-wrap">
     <table class="data-table">
         <thead>
-            <tr><th>Назва</th><th>Рік</th><th>Хв</th><th>Вік</th><th>Жанри</th><th>Майбутні сеанси</th><th>Дії</th></tr>
+            <tr><th>Назва</th><th>Рік</th><th>Хв</th><th>Вік</th><th>Жанри</th><th>Майбутні сеанси</th>{% if current_user.role == 'admin' %}<th>Дії</th>{% endif %}</tr>
         </thead>
         <tbody>
         {% for m in movies %}
@@ -69,14 +69,14 @@
                 <td><span class="badge badge-info">{{ m.age_rating }}+</span></td>
                 <td>{{ m.genres or '—' }}</td>
                 <td>{{ m.upcoming }}</td>
-                <td class="actions">
+                {% if current_user.role == 'admin' %}<td class="actions">
                     <a class="btn btn-small" href="{{ url_for('movies.edit_movie', movie_id=m.movie_id) }}">Змінити</a>
                     <form method="post" action="{{ url_for('movies.delete_movie', movie_id=m.movie_id) }}"
                           data-msg="Видалити фільм «{{ m.title }}»?" onsubmit="return confirm(this.dataset.msg)">
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-small btn-danger">Видалити</button>
                     </form>
-                </td>
+                </td>{% endif %}
             </tr>
         {% endfor %}
         </tbody>

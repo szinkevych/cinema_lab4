@@ -7,7 +7,7 @@ import os
 from contextlib import contextmanager
 
 import psycopg2
-from flask import g
+from flask import g, has_request_context
 from psycopg2 import errors
 from psycopg2.extras import RealDictCursor
 
@@ -40,6 +40,22 @@ def close_db(exception=None):
         db.close()
 
 
+def _apply_context(cur, app_user=None):
+    """Передає базі, хто виконує операцію (змінні діють лише в поточній транзакції).
+
+    app.user_id      - номер користувача, його записують тригери журналу дій;
+    app.current_user - ім'я, його записує тригер аудиту квитків.
+    """
+    if not has_request_context():
+        return
+    user = g.get("user")
+    if user:
+        cur.execute("SELECT set_config('app.user_id', %s, true)", (str(user["user_id"]),))
+    name = app_user or (user["username"] if user else None)
+    if name:
+        cur.execute("SELECT set_config('app.current_user', %s, true)", (name,))
+
+
 def query_all(sql, params=None):
     """SELECT: повертає список рядків. Кожен рядок - словник {стовпець: значення}."""
     with get_db().cursor() as cur:
@@ -63,6 +79,7 @@ def execute(sql, params=None, returning=False):
     conn = get_db()
     try:
         with conn.cursor() as cur:
+            _apply_context(cur)
             cur.execute(sql, params)
             result = cur.fetchone() if returning else cur.rowcount
         conn.commit()
@@ -80,14 +97,13 @@ def transaction(app_user=None):
             cur.execute("INSERT ...")
             cur.execute("INSERT ...")
 
-    Якщо вказано app_user, це ім'я передається в базу (змінна app.current_user
-    діє лише всередині цієї транзакції), і тригер аудиту запише його в changed_by.
+    Користувач із сесії автоматично передається в базу (див. _apply_context), тож
+    тригери журналу й аудиту знають, хто виконав операцію. app_user дозволяє підмінити ім'я.
     """
     conn = get_db()
     cur = conn.cursor()
     try:
-        if app_user:
-            cur.execute("SELECT set_config('app.current_user', %s, true)", (app_user,))
+        _apply_context(cur, app_user)
         yield cur
         conn.commit()
     except Exception:
@@ -95,6 +111,20 @@ def transaction(app_user=None):
         raise
     finally:
         cur.close()
+
+
+def log_action(action, table_name=None, record_id=None, details=None, user_id=None):
+    """Записує подію (вхід, вихід, реєстрація...) через функцію бази log_activity.
+
+    Збій журналу не повинен ламати основну дію, тому помилки тут гасяться.
+    """
+    if user_id is None and has_request_context() and g.get("user"):
+        user_id = g.user["user_id"]
+    try:
+        execute("SELECT log_activity(%s, %s, %s, %s, %s)",
+                (user_id, action, table_name, record_id, details))
+    except psycopg2.Error:
+        pass
 
 
 def db_error_message(e):

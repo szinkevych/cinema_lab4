@@ -4,41 +4,57 @@
 """
 import os
 import secrets
+from datetime import timedelta
 
 import psycopg2
-from flask import Flask, abort, render_template, request, session
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for
 
+from auth import ROLE_LABELS, STAFF
 from database import close_db, query_one
+from routes.activity import bp as activity_bp
+from routes.auth import bp as auth_bp
+from routes.customers import bp as customers_bp
 from routes.main import bp as main_bp
 from routes.movies import bp as movies_bp
-from routes.customers import bp as customers_bp
+from routes.reports import bp as reports_bp
 from routes.screenings import bp as screenings_bp
 from routes.tickets import bp as tickets_bp
-from routes.reports import bp as reports_bp
+from routes.users import bp as users_bp
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,          # JavaScript не бачить cookie сесії
+    SESSION_COOKIE_SAMESITE="Lax",         # cookie не надсилається з чужих сайтів
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+)
 
 # Підключаємо розділи сайту
-app.register_blueprint(main_bp)
-app.register_blueprint(movies_bp)
-app.register_blueprint(customers_bp)
-app.register_blueprint(screenings_bp)
-app.register_blueprint(tickets_bp)
-app.register_blueprint(reports_bp)
+for blueprint in (main_bp, auth_bp, movies_bp, customers_bp, screenings_bp, tickets_bp,
+                  reports_bp, users_bp, activity_bp):
+    app.register_blueprint(blueprint)
 
-# Пункти меню: (назва, ім'я маршруту)
+# Пункти меню: (назва, маршрут, ролі, яким це видно; None = усім)
 NAV = [
-    ("Головна", "main.index"),
-    ("Фільми", "movies.list_movies"),
-    ("Клієнти", "customers.list_customers"),
-    ("Сеанси", "screenings.list_screenings"),
-    ("Квитки", "tickets.list_tickets"),
-    ("Звіти", "reports.reports_page"),
+    ("Головна", "main.index", None),
+    ("Фільми", "movies.list_movies", None),
+    ("Клієнти", "customers.list_customers", STAFF),
+    ("Сеанси", "screenings.list_screenings", None),
+    ("Квитки", "tickets.list_tickets", None),
+    ("Звіти", "reports.reports_page", ("admin",)),
+    ("Користувачі", "users.list_users", ("admin",)),
+    ("Журнал", "activity.list_activity", ("admin",)),
 ]
+
+# Сторінки, доступні без входу
+PUBLIC_ENDPOINTS = {"auth.login", "auth.register", "static"}
 
 # Після кожного запиту закриваємо з'єднання з базою
 app.teardown_appcontext(close_db)
+
+# Поточний час за часовим поясом бази (так само, як у процедурах і тригерах)
+app.jinja_env.globals["now"] = lambda: query_one("SELECT LOCALTIMESTAMP AS now")["now"]
+app.jinja_env.globals["role_labels"] = ROLE_LABELS
 
 
 # ---------------------------------------------------------------------
@@ -52,8 +68,6 @@ def csrf_token():
 
 
 app.jinja_env.globals["csrf_token"] = csrf_token
-# Поточний час за часовим поясом бази (так само, як у процедурах і тригерах)
-app.jinja_env.globals["now"] = lambda: query_one("SELECT LOCALTIMESTAMP AS now")["now"]
 
 
 @app.before_request
@@ -65,17 +79,39 @@ def verify_csrf():
             abort(400)
 
 
-@app.errorhandler(400)
-def bad_request(error):
-    return render_template("error.html", title="Недійсний запит",
-                           message="Форма застаріла або не пройшла перевірку безпеки. "
-                                   "Поверніться назад, оновіть сторінку і спробуйте ще раз."), 400
+# ---------------------------------------------------------------------
+# Автентифікація: на кожному запиті користувача заново читаємо з бази,
+# тож видалення акаунта чи зміна ролі діють негайно, без повторного входу.
+# ---------------------------------------------------------------------
+@app.before_request
+def load_user_and_require_login():
+    g.user = None
+    user_id = session.get("user_id")
+    if user_id:
+        g.user = query_one("""SELECT user_id, username, role, customer_id
+                              FROM users WHERE user_id = %s""", (user_id,))
+        if g.user is None:
+            session.clear()
+
+    if request.endpoint is None or request.endpoint in PUBLIC_ENDPOINTS:
+        return None
+    if g.user is None:
+        target = request.full_path.rstrip("?") if request.method == "GET" else None
+        return redirect(url_for("auth.login", next=target))
+    return None
 
 
 @app.context_processor
-def inject_nav():
-    """Робить список меню доступним у всіх шаблонах."""
-    return {"nav_items": NAV, "current_endpoint": request.endpoint}
+def inject_layout():
+    """Дані для всіх шаблонів: поточний користувач і меню, відфільтроване за роллю."""
+    user = g.get("user")
+    items = []
+    for label, endpoint, roles in NAV:
+        if user and (roles is None or user["role"] in roles):
+            if endpoint == "tickets.list_tickets" and user["role"] == "customer":
+                label = "Мої квитки"
+            items.append((label, endpoint))
+    return {"nav_items": items, "current_endpoint": request.endpoint, "current_user": user}
 
 
 @app.template_filter("money")
@@ -100,6 +136,19 @@ def database_unavailable(error):
         message="Не вдалося підключитися до PostgreSQL. Перевірте, що Docker Desktop запущено, "
                 "контейнер працює (docker compose ps) і порт у database.py збігається з docker-compose.yml.",
     ), 503
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    return render_template("error.html", title="Недійсний запит",
+                           message="Форма застаріла або не пройшла перевірку безпеки. "
+                                   "Поверніться назад, оновіть сторінку і спробуйте ще раз."), 400
+
+
+@app.errorhandler(403)
+def forbidden(error):
+    return render_template("error.html", title="Доступ заборонено",
+                           message="У вас немає прав для цієї дії або сторінки."), 403
 
 
 @app.errorhandler(404)

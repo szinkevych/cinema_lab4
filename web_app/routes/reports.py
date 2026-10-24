@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from flask import Blueprint, render_template, request
 
+from auth import roles_required
 from database import query_all, query_one
 from validators import get_date
 
@@ -10,6 +11,7 @@ bp = Blueprint("reports", __name__, url_prefix="/reports")
 
 
 @bp.route("/")
+@roles_required("admin")
 def reports_page():
     today = query_one("SELECT CURRENT_DATE AS d")["d"]
     errors = {}

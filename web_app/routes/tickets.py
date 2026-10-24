@@ -8,7 +8,7 @@ import re
 from decimal import Decimal
 
 import psycopg2
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
 from database import db_error_message, query_all, query_one, transaction
 from validators import get_choice
@@ -23,7 +23,6 @@ TICKET_TYPES = {
     "student": ("Студентський (−20%)", Decimal("0.8")),
 }
 MAX_SEATS = 10                # місць у одному замовленні
-APP_USER = "web"              # ім'я для аудиту (на рівні 3 буде логін користувача)
 SEAT_RE = re.compile(r"^(\d{1,3}):(\d{1,3})$")
 
 
@@ -61,6 +60,16 @@ def sell_tickets(screening_id):
     closed = screening["start_time"] <= db_now()
     customers = query_all("""SELECT customer_id, first_name, last_name, email
                              FROM customers ORDER BY last_name, first_name""")
+    # Глядач купує квитки лише на себе
+    own_customer = None
+    if g.user["role"] == "customer":
+        if g.user["customer_id"]:
+            own_customer = query_one("""SELECT customer_id, first_name, last_name, email
+                                        FROM customers WHERE customer_id = %s""",
+                                     (g.user["customer_id"],))
+        if own_customer is None:
+            flash("Ваш обліковий запис не прив'язано до профілю клієнта, купівля недоступна.", "error")
+            return redirect(url_for("tickets.list_tickets"))
     layout = load_layout(screening_id)
     existing = {(r, s["seat_number"]) for r, seats in layout.items() for s in seats}
     form_errors, selected, values = {}, [], {"ticket_type": "regular"}
@@ -83,8 +92,11 @@ def sell_tickets(screening_id):
                     form_errors["seats"] = "Оберіть хоча б одне місце на схемі."
                 elif len(seats) > MAX_SEATS:
                     form_errors["seats"] = f"В одному замовленні не більше {MAX_SEATS} місць."
-        customer_id = get_choice(request.form, "customer_id", "Клієнт", form_errors,
-                                 {c["customer_id"] for c in customers}, cast=int)
+        if own_customer:
+            customer_id = own_customer["customer_id"]       # значення з форми ігнорується
+        else:
+            customer_id = get_choice(request.form, "customer_id", "Клієнт", form_errors,
+                                     {c["customer_id"] for c in customers}, cast=int)
         ticket_type = get_choice(request.form, "ticket_type", "Тип квитка", form_errors,
                                  set(TICKET_TYPES))
         selected = [f"{r}:{s}" for r, s in seats]
@@ -92,7 +104,7 @@ def sell_tickets(screening_id):
         if not form_errors:
             try:
                 # Усі місця замовлення продаються в одній транзакції: або всі, або жодного
-                with transaction(APP_USER) as cur:
+                with transaction() as cur:
                     ids = []
                     for row, seat in seats:
                         cur.execute("SELECT sell_ticket(%s, %s, %s, %s, %s) AS ticket_id",
@@ -113,7 +125,7 @@ def sell_tickets(screening_id):
     total_seats = sum(len(s) for s in layout.values())
     sold_seats = sum(1 for s in layout.values() for x in s if x["sold"])
     return render_template(
-        "seat_map.html", screening=screening, layout=layout, customers=customers,
+        "seat_map.html", screening=screening, layout=layout, customers=customers, own_customer=own_customer,
         ticket_types=TICKET_TYPES, closed=closed, form_errors=form_errors, selected=selected,
         values=values, total_seats=total_seats, sold_seats=sold_seats,
         max_seats=MAX_SEATS), (400 if form_errors else 200)
@@ -128,6 +140,9 @@ def list_tickets():
     if when not in ("all", "upcoming", "past"):
         when = "all"
     q = (request.args.get("q") or "").strip()
+    own_id = None                                        # глядач бачить лише власні квитки
+    if g.user["role"] == "customer":
+        own_id = g.user["customer_id"] or -1
     like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 
     when_sql = {"all": "TRUE", "upcoming": "tf.start_time >= LOCALTIMESTAMP",
@@ -137,12 +152,14 @@ def list_tickets():
         SELECT tf.*,
                (tf.status = 'sold' AND tf.start_time > LOCALTIMESTAMP + INTERVAL '1 hour') AS cancelable
         FROM tickets_full tf
-        WHERE (%(status)s = '' OR tf.status = %(status)s)
+        JOIN tickets tt ON tt.ticket_id = tf.ticket_id
+        WHERE (%(cid)s IS NULL OR tt.customer_id = %(cid)s)
+          AND (%(status)s = '' OR tf.status = %(status)s)
           AND {when_sql}
           AND (%(q)s = '' OR tf.movie ILIKE %(like)s OR tf.customer ILIKE %(like)s)
         ORDER BY tf.purchased_at DESC, tf.ticket_id DESC
         LIMIT 300
-    """, {"status": status, "q": q, "like": like})
+    """, {"status": status, "q": q, "like": like, "cid": own_id})
     total = sum(t["price"] for t in tickets if t["status"] == "sold")
     return render_template("tickets.html", tickets=tickets, total=total,
                            filters={"status": status, "when": when, "q": q})
@@ -150,8 +167,12 @@ def list_tickets():
 
 @bp.route("/<int:ticket_id>/cancel", methods=["POST"])
 def cancel_ticket(ticket_id):
+    if g.user["role"] == "customer":                     # глядач скасовує лише власні квитки
+        owner = query_one("SELECT customer_id FROM tickets WHERE ticket_id = %s", (ticket_id,))
+        if owner is not None and owner["customer_id"] != g.user["customer_id"]:
+            abort(403)
     try:
-        with transaction(APP_USER) as cur:
+        with transaction() as cur:
             cur.execute("SELECT cancel_ticket(%s)", (ticket_id,))
         flash(f"Квиток №{ticket_id} скасовано, місце знову вільне.", "success")
     except psycopg2.errors.RaiseException as e:

@@ -6,6 +6,7 @@
 import psycopg2
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
+from auth import roles_required
 from database import db_error_message, execute, query_all, query_one
 from validators import get_choice, get_datetime, get_decimal
 
@@ -83,6 +84,7 @@ def list_screenings():
 
 
 @bp.route("/add", methods=["GET", "POST"])
+@roles_required("admin")
 def add_screening():
     movies, halls = load_movies(), load_halls()
     if request.method == "POST":
@@ -103,6 +105,7 @@ def add_screening():
 
 
 @bp.route("/<int:screening_id>/edit", methods=["GET", "POST"])
+@roles_required("admin")
 def edit_screening(screening_id):
     screening = query_one("SELECT * FROM screenings WHERE screening_id = %s", (screening_id,))
     if screening is None:
@@ -145,6 +148,7 @@ def edit_screening(screening_id):
 
 
 @bp.route("/<int:screening_id>/delete", methods=["POST"])
+@roles_required("admin")
 def delete_screening(screening_id):
     if query_one("SELECT 1 AS ok FROM screenings WHERE screening_id = %s", (screening_id,)) is None:
         abort(404)

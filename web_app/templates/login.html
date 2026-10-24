@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Вхід · Кінотеатр{% endblock %}
+
+{% block content %}
+<div class="panel form-panel auth-panel">
+    <h1>Вхід</h1>
+    {% if error %}<div class="alert alert-error" style="margin-top:1rem"><span>{{ error }}</span></div>{% endif %}
+    <form method="post" novalidate style="margin-top:1rem">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+        <div class="form-group">
+            <label for="username">Логін</label>
+            <input type="text" id="username" name="username" value="{{ username }}" autocomplete="username" autofocus required>
+        </div>
+        <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Увійти</button>
+    </form>
+    <p class="muted" style="margin-top:1rem">Немає облікового запису? <a href="{{ url_for('auth.register') }}">Зареєструватися</a></p>
+</div>
+{% endblock %}

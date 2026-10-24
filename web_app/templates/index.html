@@ -1,38 +1,43 @@
 {% extends "base.html" %}
-{% block title %}Головна · Кінотеатр{% endblock %}
+{% block title %}{{ customer.first_name }} {{ customer.last_name }} · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header"><h1>Панель кінотеатру</h1></div>
-
-<div class="cards">
-    <div class="card"><div class="card-value">{{ stats.movies }}</div><div class="card-label">Фільмів у каталозі</div></div>
-    <div class="card"><div class="card-value">{{ stats.upcoming }}</div><div class="card-label">Майбутніх сеансів</div></div>
-    <div class="card"><div class="card-value">{{ stats.tickets_sold }}</div><div class="card-label">Продано квитків</div></div>
-    <div class="card"><div class="card-value">{{ stats.revenue | money }}</div><div class="card-label">Виручка</div></div>
-    <div class="card"><div class="card-value">{{ stats.customers }}</div><div class="card-label">Клієнтів</div></div>
+<div class="page-header">
+    <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
+    {% if current_user.role != 'customer' %}<div class="actions">
+        <a class="btn" href="{{ url_for('customers.list_customers') }}">← До списку</a>
+        <a class="btn btn-warning" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">Змінити</a>
+    </div>{% endif %}
 </div>
 
-<h2>Розклад на сьогодні</h2>
-{% if today %}
+<div class="cards">
+    <div class="card"><div class="card-value">{{ sold_count }}</div><div class="card-label">Активних квитків</div></div>
+    <div class="card"><div class="card-value">{{ total_spent | money }}</div><div class="card-label">Витрачено</div></div>
+    <div class="card"><div class="card-value" style="font-size:1rem">{{ customer.email }}</div><div class="card-label">Email</div></div>
+    <div class="card"><div class="card-value" style="font-size:1rem">{{ customer.phone or '—' }}</div><div class="card-label">Телефон</div></div>
+</div>
+
+<h2>Історія покупок</h2>
+{% if tickets %}
 <div class="table-wrap">
     <table class="data-table">
-        <thead><tr><th>Початок</th><th>Фільм</th><th>Зал</th><th>Заповненість</th></tr></thead>
+        <thead><tr><th>Квиток</th><th>Фільм</th><th>Зал</th><th>Початок</th><th>Місце</th><th>Ціна</th><th>Статус</th></tr></thead>
         <tbody>
-        {% for s in today %}
+        {% for t in tickets %}
             <tr>
-                <td>{{ s.start_time.strftime('%H:%M') }}</td>
-                <td>{{ s.title }}</td>
-                <td>{{ s.hall }}</td>
-                <td>
-                    <div class="bar"><div class="bar-fill" style="width: {{ s.occupancy_pct }}%"></div></div>
-                    <small>{{ s.sold_seats }} з {{ s.total_seats }} ({{ s.occupancy_pct }}%)</small>
-                </td>
+                <td>№{{ t.ticket_id }}</td>
+                <td>{{ t.title }}</td>
+                <td>{{ t.hall }}</td>
+                <td>{{ t.start_time | dt }}</td>
+                <td>ряд {{ t.row_number }}, місце {{ t.seat_number }}</td>
+                <td>{{ t.price | money }}</td>
+                <td>{% if t.status == 'sold' %}<span class="badge badge-ok">діє</span>{% else %}<span class="badge badge-off">скасовано</span>{% endif %}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
 {% else %}
-<div class="panel"><p class="muted">На сьогодні сеансів немає.</p></div>
+<div class="panel"><p class="muted">Покупок ще немає.</p></div>
 {% endif %}
 {% endblock %}

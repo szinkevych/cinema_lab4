@@ -4,10 +4,10 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
-    <div class="actions">
+    {% if current_user.role != 'customer' %}<div class="actions">
         <a class="btn" href="{{ url_for('customers.list_customers') }}">← До списку</a>
         <a class="btn btn-warning" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">Змінити</a>
-    </div>
+    </div>{% endif %}
 </div>
 
 <div class="cards">

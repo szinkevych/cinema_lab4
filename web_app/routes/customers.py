@@ -1,7 +1,8 @@
 """Розділ «Клієнти»: список з пошуком, картка з історією покупок, додавання, зміна, видалення."""
 import psycopg2
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
 
+from auth import STAFF, roles_required
 from database import db_error_message, execute, query_all, query_one
 from validators import get_email, get_phone, get_text
 
@@ -44,6 +45,7 @@ def unique_violation_to_errors(e, form_errors):
 
 
 @bp.route("/")
+@roles_required(*STAFF)
 def list_customers():
     q = (request.args.get("q") or "").strip()
     sort = request.args.get("sort", "name")
@@ -71,6 +73,9 @@ def list_customers():
 
 @bp.route("/<int:customer_id>")
 def customer_detail(customer_id):
+    # Глядач бачить лише власну картку; співробітники - будь-яку
+    if g.user["role"] == "customer" and g.user["customer_id"] != customer_id:
+        abort(403)
     customer = query_one("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
     if customer is None:
         abort(404)
@@ -90,6 +95,7 @@ def customer_detail(customer_id):
 
 
 @bp.route("/add", methods=["GET", "POST"])
+@roles_required(*STAFF)
 def add_customer():
     if request.method == "POST":
         data, form_errors = validate_customer(request.form)
@@ -111,6 +117,7 @@ def add_customer():
 
 
 @bp.route("/<int:customer_id>/edit", methods=["GET", "POST"])
+@roles_required(*STAFF)
 def edit_customer(customer_id):
     customer = query_one("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
     if customer is None:
@@ -139,6 +146,7 @@ def edit_customer(customer_id):
 
 
 @bp.route("/<int:customer_id>/delete", methods=["POST"])
+@roles_required(*STAFF)
 def delete_customer(customer_id):
     customer = query_one("SELECT first_name, last_name FROM customers WHERE customer_id = %s",
                          (customer_id,))

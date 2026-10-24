@@ -142,3 +142,32 @@ def get_date(form, name, label, errors, required=True):
     except ValueError:
         errors[name] = f"Поле «{label}»: вкажіть дату у форматі РРРР-ММ-ДД."
         return None
+
+
+USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,30}$")
+
+
+def get_username(form, name, label, errors):
+    value = (form.get(name) or "").strip()
+    if not value:
+        errors[name] = f"Поле «{label}» обов'язкове."
+        return None
+    if not USERNAME_RE.match(value):
+        errors[name] = "Логін: 3-30 символів, лише латинські літери, цифри та . _ -"
+        return None
+    return value
+
+
+def get_password(form, name, label, errors):
+    """Пробіли в паролі не обрізаються. Вимоги: 8-128 символів, літери та цифри."""
+    value = form.get(name) or ""
+    if not value:
+        errors[name] = f"Поле «{label}» обов'язкове."
+        return None
+    if len(value) < 8 or len(value) > 128:
+        errors[name] = "Пароль має містити від 8 до 128 символів."
+        return None
+    if not re.search(r"[^\W\d_]", value) or not re.search(r"\d", value):
+        errors[name] = "Пароль має містити і літери, і цифри."
+        return None
+    return value

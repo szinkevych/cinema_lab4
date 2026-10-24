@@ -3,8 +3,8 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Квитки</h1>
-    <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">+ Продати квиток (обрати сеанс)</a>
+    <h1>{{ 'Мої квитки' if current_user.role == 'customer' else 'Квитки' }}</h1>
+    <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">{{ '+ Купити квиток' if current_user.role == 'customer' else '+ Продати квиток (обрати сеанс)' }}</a>
 </div>
 
 <form method="get" class="panel filters">

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Реєстрація · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="panel form-panel auth-panel">
+    <h1>Реєстрація глядача</h1>
+    <form method="post" novalidate style="margin-top:1rem">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+        <div class="form-group {{ 'has-error' if form_errors.get('username') }}">
+            <label for="username">Логін *</label>
+            <input type="text" id="username" name="username" maxlength="30" value="{{ values.get('username', '') }}" autocomplete="username" required>
+            <div class="hint">3-30 символів: латинські літери, цифри, . _ -</div>
+            {{ field_error('username') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('first_name') }}">
+            <label for="first_name">Ім'я *</label>
+            <input type="text" id="first_name" name="first_name" maxlength="50" value="{{ values.get('first_name', '') }}" required>
+            {{ field_error('first_name') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('last_name') }}">
+            <label for="last_name">Прізвище *</label>
+            <input type="text" id="last_name" name="last_name" maxlength="50" value="{{ values.get('last_name', '') }}" required>
+            {{ field_error('last_name') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('email') }}">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" maxlength="100" value="{{ values.get('email', '') }}" autocomplete="email" required>
+            {{ field_error('email') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('phone') }}">
+            <label for="phone">Телефон</label>
+            <input type="text" id="phone" name="phone" maxlength="25" value="{{ values.get('phone', '') }}" placeholder="+380501234567">
+            {{ field_error('phone') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('password') }}">
+            <label for="password">Пароль *</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" required>
+            <div class="hint">Щонайменше 8 символів, літери й цифри.</div>
+            {{ field_error('password') }}
+        </div>
+        <div class="form-group {{ 'has-error' if form_errors.get('password2') }}">
+            <label for="password2">Повторіть пароль *</label>
+            <input type="password" id="password2" name="password2" autocomplete="new-password" required>
+            {{ field_error('password2') }}
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Зареєструватися</button>
+    </form>
+    <p class="muted" style="margin-top:1rem">Вже є обліковий запис? <a href="{{ url_for('auth.login') }}">Увійти</a></p>
+</div>
+{% endblock %}
