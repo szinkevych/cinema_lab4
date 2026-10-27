@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Мій акаунт · Кінотеатр{% endblock %}
+
+{% block content %}
+<section class="account-hero">
+    <div>
+        <p class="eyebrow">ОСОБИСТИЙ КАБІНЕТ</p>
+        <h1>Вітаємо, {{ account.first_name }}!</h1>
+        <p class="muted">Керуйте контактними даними та переглядайте свої квитки.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('account.edit_profile') }}">Редагувати профіль</a>
+</section>
+
+<div class="profile-grid">
+    <section class="panel profile-card">
+        <p class="eyebrow">ОСОБИСТІ ДАНІ</p>
+        <dl class="profile-list">
+            <div><dt>Ім'я та прізвище</dt><dd>{{ account.first_name }} {{ account.last_name }}</dd></div>
+            <div><dt>Логін</dt><dd>{{ account.username }}</dd></div>
+            <div><dt>Email</dt><dd>{{ account.email }}</dd></div>
+            <div><dt>Телефон</dt><dd>{{ account.phone or 'Не вказано' }}</dd></div>
+        </dl>
+    </section>
+    <section class="panel account-action-card">
+        <span class="account-icon">▣</span>
+        <h2>Ваші квитки</h2>
+        <p class="muted">Перевірте час сеансу, місця та статус замовлень.</p>
+        <a class="btn btn-primary" href="{{ url_for('tickets.list_tickets') }}">Відкрити квитки</a>
+    </section>
+</div>
+{% endblock %}

@@ -2,19 +2,91 @@
 {% block title %}Сеанси · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Сеанси</h1>
-    {% if current_user.role == 'admin' %}<a class="btn btn-primary" href="{{ url_for('screenings.add_screening') }}">+ Додати сеанс</a>{% endif %}
+{% if not current_user or current_user.role == 'customer' %}
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">ВАШ НАСТУПНИЙ КІНОВЕЧІР</p>
+        <h1>Оберіть свій<br><span>сеанс.</span></h1>
+        <p>Перегляньте розклад на сьогодні й наступні дні та знайдіть зручний час для кіно.</p>
+    </div>
+    <div class="hero-mark" aria-hidden="true"><span>★</span><small>ЧАС ДЛЯ КІНО<br>ВЖЕ БЛИЗЬКО</small></div>
+</section>
+
+<div class="section-heading">
+    <div><p class="eyebrow">РОЗКЛАД КІНОТЕАТРУ</p><h2>Майбутні сеанси</h2></div>
 </div>
 
 <form method="get" class="panel filters">
     <div class="form-group">
         <label for="when">Період</label>
         <select id="when" name="when">
-            <option value="upcoming" {{ 'selected' if filters.when == 'upcoming' }}>Майбутні</option>
             <option value="today" {{ 'selected' if filters.when == 'today' }}>Сьогодні</option>
-            <option value="past" {{ 'selected' if filters.when == 'past' }}>Минулі</option>
-            <option value="all" {{ 'selected' if filters.when == 'all' }}>Усі</option>
+            <option value="upcoming" {{ 'selected' if filters.when == 'upcoming' }}>Сьогодні й наступні дні</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="movie">Фільм</label>
+        <select id="movie" name="movie">
+            <option value="">Усі фільми</option>
+            {% for m in movies %}
+                <option value="{{ m.movie_id }}" {{ 'selected' if filters.movie == m.movie_id }}>{{ m.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="hall">Зал</label>
+        <select id="hall" name="hall">
+            <option value="">Усі зали</option>
+            {% for h in halls %}
+                <option value="{{ h.hall_id }}" {{ 'selected' if filters.hall == h.hall_id }}>{{ h.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Показати</button>
+        <a href="{{ url_for('screenings.list_screenings') }}" class="btn">Скинути</a>
+    </div>
+</form>
+
+<p class="catalog-count">Знайдено <strong>{{ screenings | length }}</strong> сеансів</p>
+{% if screenings %}
+<div class="screening-grid">
+    {% for s in screenings %}
+    <article class="screening-card">
+        <div class="screening-card-top">
+            <span class="badge badge-info">{{ s.start_time | dt }}</span>
+            <span class="screening-hall">{{ s.hall }}</span>
+        </div>
+        <h3>{{ s.title }}</h3>
+        <div class="screening-meta">
+            <span>{{ s.total_seats - s.sold_seats }} вільних місць</span>
+            <span>{{ s.base_price | money }}</span>
+        </div>
+        {% if current_user %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('tickets.sell_tickets', screening_id=s.screening_id) }}">Обрати місця</a>
+        {% else %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('auth.login', next=url_for('tickets.sell_tickets', screening_id=s.screening_id)) }}">Увійти для купівлі</a>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="panel empty-state"><span class="empty-icon">◷</span><h3>Сеансів за цими умовами немає</h3><p class="muted">Спробуйте обрати інший період або фільтр.</p></div>
+{% endif %}
+{% else %}
+<div class="page-header">
+    <h1>Сеанси</h1>
+    {% if current_user and current_user.role == 'admin' %}<a class="btn btn-primary" href="{{ url_for('screenings.add_screening') }}">+ Додати сеанс</a>{% endif %}
+</div>
+
+<p class="muted page-intro">Оберіть фільм і зручний час. У розкладі — сеанси, що ще не розпочалися.</p>
+
+<form method="get" class="panel filters">
+    <div class="form-group">
+        <label for="when">Період</label>
+        <select id="when" name="when">
+            <option value="today" {{ 'selected' if filters.when == 'today' }}>Сьогодні</option>
+            <option value="upcoming" {{ 'selected' if filters.when == 'upcoming' }}>Сьогодні й наступні дні</option>
         </select>
     </div>
     <div class="form-group">
@@ -52,7 +124,7 @@
             <tr>
                 <td>{{ s.screening_id }}</td>
                 <td>{{ s.start_time | dt }}{% if s.start_time < now %} <span class="badge badge-off">минув</span>{% endif %}</td>
-                <td><a href="{{ url_for('movies.movie_detail', movie_id=s.movie_id) }}">{{ s.title }}</a></td>
+                <td>{% if current_user and current_user.role == 'customer' %}{{ s.title }}{% else %}<a href="{{ url_for('movies.movie_detail', movie_id=s.movie_id) }}">{{ s.title }}</a>{% endif %}</td>
                 <td>{{ s.hall }} <span class="badge badge-info">{{ s.hall_type }}</span></td>
                 <td>{{ s.base_price | money }}</td>
                 <td>
@@ -60,11 +132,15 @@
                     <small>{{ s.sold_seats }} з {{ s.total_seats }}</small>
                 </td>
                 <td class="actions">
-                    <a class="btn btn-small btn-primary" href="{{ url_for('tickets.sell_tickets', screening_id=s.screening_id) }}">Квитки</a>
-                    {% if current_user.role == 'admin' and s.start_time >= now %}
+                    {% if current_user %}
+                    <a class="btn btn-small btn-primary" href="{{ url_for('tickets.sell_tickets', screening_id=s.screening_id) }}">{{ 'Обрати місця' if current_user.role == 'customer' else 'Квитки' }}</a>
+                    {% else %}
+                    <a class="btn btn-small btn-primary" href="{{ url_for('auth.login', next=url_for('tickets.sell_tickets', screening_id=s.screening_id)) }}">Увійти для купівлі</a>
+                    {% endif %}
+                    {% if current_user and current_user.role == 'admin' and s.start_time >= now %}
                     <a class="btn btn-small" href="{{ url_for('screenings.edit_screening', screening_id=s.screening_id) }}">Змінити</a>
                     {% endif %}
-                    {% if current_user.role == 'admin' %}<form method="post" action="{{ url_for('screenings.delete_screening', screening_id=s.screening_id) }}"
+                    {% if current_user and current_user.role == 'admin' %}<form method="post" action="{{ url_for('screenings.delete_screening', screening_id=s.screening_id) }}"
                           data-msg="Видалити сеанс №{{ s.screening_id }}?" onsubmit="return confirm(this.dataset.msg)">
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-small btn-danger">Видалити</button>
@@ -77,5 +153,6 @@
 </div>
 {% else %}
 <div class="panel"><p class="muted">Сеансів за цими умовами немає.</p></div>
+{% endif %}
 {% endif %}
 {% endblock %}

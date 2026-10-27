@@ -12,12 +12,10 @@ from validators import get_choice, get_datetime, get_decimal
 
 bp = Blueprint("screenings", __name__, url_prefix="/screenings")
 
-# Умова за періодом береться лише з цього словника
+# Фільтри не дозволяють показати глядачам сеанси, що вже почалися.
 WHEN_SQL = {
     "upcoming": "s.start_time >= LOCALTIMESTAMP",
-    "today": "s.start_time::date = CURRENT_DATE",
-    "past": "s.start_time < LOCALTIMESTAMP",
-    "all": "TRUE",
+    "today": "s.start_time >= LOCALTIMESTAMP AND s.start_time < CURRENT_DATE + INTERVAL '1 day'",
 }
 
 
@@ -65,7 +63,6 @@ def list_screenings():
         when = "upcoming"
     movie = request.args.get("movie", type=int)
     hall = request.args.get("hall", type=int)
-    direction = "DESC" if when == "past" else "ASC"
 
     screenings = query_all(f"""
         SELECT o.screening_id, o.title, o.hall, o.start_time, o.sold_seats, o.total_seats,
@@ -76,7 +73,7 @@ def list_screenings():
         WHERE {WHEN_SQL[when]}
           AND (%(movie)s IS NULL OR s.movie_id = %(movie)s)
           AND (%(hall)s IS NULL OR s.hall_id = %(hall)s)
-        ORDER BY o.start_time {direction}
+        ORDER BY o.start_time ASC
     """, {"movie": movie, "hall": hall})
     return render_template("screenings.html", screenings=screenings, movies=load_movies(),
                            halls=load_halls(), filters={"when": when, "movie": movie, "hall": hall},

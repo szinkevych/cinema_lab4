@@ -3,8 +3,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>{{ 'Мої квитки' if current_user.role == 'customer' else 'Квитки' }}</h1>
-    <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">{{ '+ Купити квиток' if current_user.role == 'customer' else '+ Продати квиток (обрати сеанс)' }}</a>
+    <div><p class="eyebrow">{{ 'ОСОБИСТИЙ КАБІНЕТ' if current_user.role == 'customer' else 'КІНОТЕАТР' }}</p>
+    <h1>{{ 'Мої квитки' if current_user.role == 'customer' else 'Квитки' }}</h1></div>
+    <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">{{ 'Знайти сеанс' if current_user.role == 'customer' else '+ Продати квиток (обрати сеанс)' }}</a>
 </div>
 
 <form method="get" class="panel filters">
@@ -39,16 +40,18 @@
 {% if tickets %}
 <div class="table-wrap">
     <table class="data-table">
-        <thead><tr><th>№</th><th>Фільм</th><th>Зал</th><th>Початок</th><th>Місце</th><th>Клієнт</th><th>Ціна</th><th>Статус</th><th></th></tr></thead>
+        <thead><tr><th>Квиток</th><th>Фільм і сеанс</th><th>Місце</th>{% if current_user.role != 'customer' %}<th>Клієнт</th>{% endif %}<th>Ціна</th><th>Статус</th><th></th></tr></thead>
         <tbody>
         {% for t in tickets %}
             <tr>
-                <td>{{ t.ticket_id }}</td>
-                <td>{{ t.movie }}</td>
-                <td>{{ t.hall }}</td>
-                <td>{{ t.start_time | dt }}</td>
+                <td><strong>№{{ t.ticket_id }}</strong><br><small class="muted">{{ t.hall }}</small></td>
+                <td>
+                    <strong>{{ t.movie }}</strong><br>
+                    <span class="muted">{{ t.start_time | dt }}</span><br>
+                    <span class="badge badge-time-{{ t.time_state }}">{{ t.time_label }}</span>
+                </td>
                 <td>ряд {{ t.row_number }}, місце {{ t.seat_number }}</td>
-                <td>{{ t.customer }}</td>
+                {% if current_user.role != 'customer' %}<td>{{ t.customer }}</td>{% endif %}
                 <td>{{ t.price | money }}</td>
                 <td>{% if t.status == 'sold' %}<span class="badge badge-ok">діє</span>{% else %}<span class="badge badge-off">скасовано</span>{% endif %}</td>
                 <td class="actions">
@@ -58,8 +61,6 @@
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-small btn-danger">Скасувати</button>
                     </form>
-                    {% elif t.status == 'sold' %}
-                        <small class="muted">менше години до початку</small>
                     {% endif %}
                 </td>
             </tr>

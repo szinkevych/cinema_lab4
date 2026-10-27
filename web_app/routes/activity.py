@@ -32,6 +32,14 @@ def list_activity():
 
     return render_template(
         "activity.html", rows=rows, total=total, page=page, pages=pages,
+        stats=query_one("""
+            SELECT
+                (SELECT COUNT(*) FROM movies) AS movies,
+                (SELECT COUNT(*) FROM customers) AS customers,
+                (SELECT COUNT(*) FROM screenings WHERE start_time > CURRENT_TIMESTAMP) AS upcoming,
+                (SELECT COUNT(*) FROM tickets WHERE status = 'sold') AS tickets_sold,
+                (SELECT COALESCE(SUM(price), 0) FROM tickets WHERE status = 'sold') AS revenue
+        """),
         users=query_all("SELECT user_id, username FROM users ORDER BY username"),
         tables=[r["table_name"] for r in query_all(
             "SELECT DISTINCT table_name FROM activity_log WHERE table_name IS NOT NULL ORDER BY 1")],

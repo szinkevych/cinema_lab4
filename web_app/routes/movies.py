@@ -55,6 +55,7 @@ def like_pattern(text):
 
 
 @bp.route("/")
+@roles_required("admin", "cashier")
 def list_movies():
     q = (request.args.get("q") or "").strip()
     genre = request.args.get("genre", type=int)
@@ -67,7 +68,7 @@ def list_movies():
     order = "DESC" if request.args.get("order") == "desc" else "ASC"
 
     movies = query_all(f"""
-        SELECT m.movie_id, m.title, m.release_year, m.duration_min, m.age_rating,
+        SELECT m.movie_id, m.title, m.description, m.release_year, m.duration_min, m.age_rating,
                COALESCE(string_agg(g.name, ', ' ORDER BY g.name), '') AS genres,
                (SELECT COUNT(*) FROM screenings s
                 WHERE s.movie_id = m.movie_id AND s.start_time > CURRENT_TIMESTAMP) AS upcoming
@@ -89,6 +90,7 @@ def list_movies():
 
 
 @bp.route("/<int:movie_id>")
+@roles_required("admin", "cashier")
 def movie_detail(movie_id):
     movie = query_one("SELECT * FROM movies WHERE movie_id = %s", (movie_id,))
     if movie is None:
@@ -101,7 +103,7 @@ def movie_detail(movie_id):
         SELECT o.screening_id, o.hall, o.start_time, o.sold_seats, o.total_seats, o.occupancy_pct
         FROM screening_occupancy o
         JOIN screenings s ON s.screening_id = o.screening_id
-        WHERE s.movie_id = %s
+        WHERE s.movie_id = %s AND s.start_time >= LOCALTIMESTAMP
         ORDER BY o.start_time""", (movie_id,))
     return render_template("movie_detail.html", movie=movie, genres=genres, screenings=screenings)
 

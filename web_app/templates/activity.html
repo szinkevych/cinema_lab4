@@ -2,7 +2,24 @@
 {% block title %}Журнал дій · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header"><h1>Журнал дій</h1></div>
+<section class="activity-hero">
+    <div><p class="eyebrow">ПАНЕЛЬ АДМІНІСТРАТОРА</p><h1>Огляд системи</h1>
+    <p>Поточна статистика кінотеатру та історія дій користувачів.</p></div>
+    <span class="activity-hero-icon" aria-hidden="true">▤</span>
+</section>
+
+<div class="activity-stats">
+    <article class="activity-stat"><span class="activity-stat-icon">▧</span><span class="activity-stat-label">Фільмів у каталозі</span><strong>{{ stats.movies }}</strong></article>
+    <article class="activity-stat"><span class="activity-stat-icon">♙</span><span class="activity-stat-label">Клієнтів</span><strong>{{ stats.customers }}</strong></article>
+    <article class="activity-stat"><span class="activity-stat-icon">◷</span><span class="activity-stat-label">Майбутніх сеансів</span><strong>{{ stats.upcoming }}</strong></article>
+    <article class="activity-stat"><span class="activity-stat-icon">▣</span><span class="activity-stat-label">Проданих квитків</span><strong>{{ stats.tickets_sold }}</strong></article>
+    <article class="activity-stat activity-stat-revenue"><span class="activity-stat-icon">₴</span><span class="activity-stat-label">Загальна виручка</span><strong>{{ stats.revenue | money }}</strong></article>
+</div>
+
+<div class="section-heading activity-log-heading">
+    <div><p class="eyebrow">БЕЗПЕКА Й КОНТРОЛЬ</p><h2>Журнал дій</h2></div>
+    <span class="activity-count">{{ total }} записів</span>
+</div>
 
 <form method="get" class="panel filters">
     <div class="form-group">

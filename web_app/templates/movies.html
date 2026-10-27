@@ -2,12 +2,17 @@
 {% block title %}Фільми · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Фільми</h1>
-    {% if current_user.role == 'admin' %}<a class="btn btn-primary" href="{{ url_for('movies.add_movie') }}">+ Додати фільм</a>{% endif %}
-</div>
+<section class="catalog-hero">
+    <div>
+        <p class="eyebrow">{{ 'КІНОТЕАТР · ПАНЕЛЬ КЕРУВАННЯ' if current_user and current_user.role in ('admin', 'cashier') else 'ЗНАЙДІТЬ СВІЙ НАСТУПНИЙ ФІЛЬМ' }}</p>
+        <h1>{{ 'Кінозал' if current_user and current_user.role in ('admin', 'cashier') else 'Фільми' }}</h1>
+        <p>Історії, що оживають на великому екрані. Оберіть свою.</p>
+    </div>
+    <div class="catalog-hero-art" aria-hidden="true"><span>✳</span><small>ЗАЛИШАЙСЯ<br>В ІСТОРІЇ</small></div>
+    {% if current_user and current_user.role == 'admin' %}<a class="btn btn-primary catalog-add" href="{{ url_for('movies.add_movie') }}">+ Додати фільм</a>{% endif %}
+</section>
 
-<form method="get" class="panel filters">
+<form method="get" class="panel filters catalog-filters">
     <div class="form-group">
         <label for="q">Пошук за назвою</label>
         <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Наприклад, дюна">
@@ -52,35 +57,38 @@
     </div>
 </form>
 
-<p class="muted">Знайдено фільмів: {{ movies | length }}</p>
+<p class="catalog-count">Знайдено <strong>{{ movies | length }}</strong> фільмів</p>
 
 {% if movies %}
-<div class="table-wrap">
-    <table class="data-table">
-        <thead>
-            <tr><th>Назва</th><th>Рік</th><th>Хв</th><th>Вік</th><th>Жанри</th><th>Майбутні сеанси</th>{% if current_user.role == 'admin' %}<th>Дії</th>{% endif %}</tr>
-        </thead>
-        <tbody>
-        {% for m in movies %}
-            <tr>
-                <td><a href="{{ url_for('movies.movie_detail', movie_id=m.movie_id) }}">{{ m.title }}</a></td>
-                <td>{{ m.release_year }}</td>
-                <td>{{ m.duration_min }}</td>
-                <td><span class="badge badge-info">{{ m.age_rating }}+</span></td>
-                <td>{{ m.genres or '—' }}</td>
-                <td>{{ m.upcoming }}</td>
-                {% if current_user.role == 'admin' %}<td class="actions">
-                    <a class="btn btn-small" href="{{ url_for('movies.edit_movie', movie_id=m.movie_id) }}">Змінити</a>
-                    <form method="post" action="{{ url_for('movies.delete_movie', movie_id=m.movie_id) }}"
-                          data-msg="Видалити фільм «{{ m.title }}»?" onsubmit="return confirm(this.dataset.msg)">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-small btn-danger">Видалити</button>
-                    </form>
-                </td>{% endif %}
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="movie-grid">
+    {% for m in movies %}
+    <article class="movie-card">
+        <div class="movie-art movie-art-{{ loop.index0 % 6 }}">
+            <span class="movie-age">{{ m.age_rating }}+</span>
+            <span class="movie-art-mark" aria-hidden="true">✦</span>
+            <span class="movie-art-caption">НА ВЕЛИКОМУ ЕКРАНІ</span>
+        </div>
+        <div class="movie-card-body">
+            <div class="movie-card-meta"><span>{{ m.release_year }}</span><span>{{ m.duration_min }} хв</span><span>{{ m.upcoming }} сеансів</span></div>
+            <h2><a href="{{ url_for('movies.movie_detail', movie_id=m.movie_id) }}">{{ m.title }}</a></h2>
+            <p class="movie-description">{{ m.description or 'Відкрийте для себе цю історію на великому екрані.' }}</p>
+            <div class="movie-genres">
+                {% for genre in m.genres.split(', ') if genre %}<span>{{ genre }}</span>{% else %}<span>Жанр не вказано</span>{% endfor %}
+            </div>
+            <div class="movie-card-actions">
+                <a class="btn btn-primary" href="{{ url_for('movies.movie_detail', movie_id=m.movie_id) }}">Детальніше <span aria-hidden="true">→</span></a>
+                {% if current_user and current_user.role == 'admin' %}
+                <a class="btn movie-edit-btn" href="{{ url_for('movies.edit_movie', movie_id=m.movie_id) }}">Редагувати</a>
+                <form method="post" action="{{ url_for('movies.delete_movie', movie_id=m.movie_id) }}"
+                      data-msg="Видалити фільм «{{ m.title }}»?" onsubmit="return confirm(this.dataset.msg)">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-small btn-danger">Видалити</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </article>
+    {% endfor %}
 </div>
 {% else %}
 <div class="panel"><p class="muted">За вашим запитом фільмів не знайдено.</p></div>

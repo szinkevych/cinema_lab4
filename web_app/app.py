@@ -7,11 +7,13 @@ import secrets
 from datetime import timedelta
 
 import psycopg2
-from flask import Flask, abort, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, session, url_for
 
 from auth import ROLE_LABELS, STAFF
 from database import close_db, query_one
 from routes.activity import bp as activity_bp
+from routes.account import bp as account_bp
+from routes.api import bp as api_bp
 from routes.auth import bp as auth_bp
 from routes.customers import bp as customers_bp
 from routes.main import bp as main_bp
@@ -30,24 +32,28 @@ app.config.update(
 )
 
 # Підключаємо розділи сайту
-for blueprint in (main_bp, auth_bp, movies_bp, customers_bp, screenings_bp, tickets_bp,
+for blueprint in (main_bp, auth_bp, api_bp, account_bp, movies_bp, customers_bp, screenings_bp, tickets_bp,
                   reports_bp, users_bp, activity_bp):
     app.register_blueprint(blueprint)
 
 # Пункти меню: (назва, маршрут, ролі, яким це видно; None = усім)
 NAV = [
     ("Головна", "main.index", None),
-    ("Фільми", "movies.list_movies", None),
+    ("Фільми", "movies.list_movies", STAFF),
     ("Клієнти", "customers.list_customers", STAFF),
     ("Сеанси", "screenings.list_screenings", None),
-    ("Квитки", "tickets.list_tickets", None),
+    ("Квитки", "tickets.list_tickets", ("admin", "cashier", "customer")),
+    ("Мій акаунт", "account.profile", ("customer",)),
     ("Звіти", "reports.reports_page", ("admin",)),
     ("Користувачі", "users.list_users", ("admin",)),
     ("Журнал", "activity.list_activity", ("admin",)),
 ]
 
 # Сторінки, доступні без входу
-PUBLIC_ENDPOINTS = {"auth.login", "auth.register", "static"}
+PUBLIC_ENDPOINTS = {
+    "auth.login", "auth.register", "static", "main.index", "screenings.list_screenings",
+    "api.list_movies", "api.list_screenings", "api.screening_availability",
+}
 
 # Після кожного запиту закриваємо з'єднання з базою
 app.teardown_appcontext(close_db)
@@ -105,10 +111,15 @@ def load_user_and_require_login():
 def inject_layout():
     """Дані для всіх шаблонів: поточний користувач і меню, відфільтроване за роллю."""
     user = g.get("user")
+    role = user["role"] if user else "guest"
     items = []
     for label, endpoint, roles in NAV:
-        if user and (roles is None or user["role"] in roles):
-            if endpoint == "tickets.list_tickets" and user["role"] == "customer":
+        if roles is None or role in roles:
+            if role in STAFF and endpoint == "main.index":
+                label, endpoint = "Головна", "movies.list_movies"
+            elif role in STAFF and endpoint == "movies.list_movies":
+                continue
+            if endpoint == "tickets.list_tickets" and user and user["role"] == "customer":
                 label = "Мої квитки"
             items.append((label, endpoint))
     return {"nav_items": items, "current_endpoint": request.endpoint, "current_user": user}
@@ -153,6 +164,8 @@ def forbidden(error):
 
 @app.errorhandler(404)
 def not_found(error):
+    if request.path.startswith("/api/"):
+        return jsonify(error={"code": 404, "message": "Ендпойнт не знайдено."}), 404
     return render_template("error.html", title="Сторінку не знайдено",
                            message="Такої сторінки не існує."), 404
 

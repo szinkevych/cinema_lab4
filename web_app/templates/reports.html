@@ -2,10 +2,20 @@
 {% block title %}Звіти · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header"><h1>Звіти</h1></div>
+<div class="page-header report-page-header">
+    <h1>Звіти</h1>
+    {% if not errors %}
+    <div class="report-downloads">
+        <button class="btn btn-primary" type="submit" form="report-filter"
+                formaction="{{ url_for('reports.export_excel') }}">Завантажити Excel</button>
+        <button class="btn" type="submit" form="report-filter"
+                formaction="{{ url_for('reports.export_pdf') }}">Завантажити PDF</button>
+    </div>
+    {% endif %}
+</div>
 
 <h2>Виручка по залах за період</h2>
-<form method="get" class="panel filters">
+<form id="report-filter" method="get" class="panel filters">
     <div class="form-group {{ 'has-error' if errors.get('from') }}">
         <label for="from">Від</label>
         <input type="date" id="from" name="from" value="{{ form_values['from'] }}">

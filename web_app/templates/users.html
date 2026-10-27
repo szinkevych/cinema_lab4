@@ -48,7 +48,7 @@
 </div>
 
 <h2>Створити обліковий запис співробітника</h2>
-<form method="post" class="panel form-panel" novalidate>
+<form method="post" class="panel form-panel" novalidate data-validate-password="true">
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <div class="form-group {{ 'has-error' if form_errors.get('username') }}">
         <label for="username">Логін *</label>

@@ -5,11 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Кінотеатр{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='validation.js') }}" defer></script>
 </head>
 <body>
     <header class="topbar">
         <div class="topbar-inner">
-            <a class="brand" href="{{ url_for('main.index') }}">🎬 Кінотеатр</a>
+            {% set home_endpoint = 'movies.list_movies' if current_user and current_user.role in ('admin', 'cashier') else 'main.index' %}
+            <a class="brand" href="{{ url_for(home_endpoint) }}" aria-label="Кінокадр — на головну">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" role="img">
+                        <path class="brand-mark-frame" d="M8 13.5 38.5 8l3 26L11 39z"/>
+                        <path class="brand-mark-top" d="m8 13.5 4-7 30-5 1 6.5z"/>
+                        <path class="brand-mark-cut" d="m15 7.3 3 6.7m7-8.2 3 6.7m7-8 3 6.6"/>
+                        <path class="brand-mark-screen" d="M17 21h16M18 27h17M19 33h10"/>
+                    </svg>
+                </span>
+                <span class="brand-copy"><strong>КІНОКАДР</strong><small>КІНОТЕАТР · РОЗКЛАД</small></span>
+            </a>
             <nav>
                 {% for label, endpoint in nav_items %}
                     <a href="{{ url_for(endpoint) }}"
@@ -18,7 +30,11 @@
             </nav>
             <div class="user-box">
                 {% if current_user %}
-                    <span>{{ current_user.username }}</span>
+                    {% if current_user.role == 'customer' %}
+                    <a class="user-name" href="{{ url_for('account.profile') }}">{{ current_user.username }}</a>
+                    {% else %}
+                    <span class="user-name">{{ current_user.username }}</span>
+                    {% endif %}
                     <span class="badge badge-info">{{ role_labels[current_user.role] }}</span>
                     <form method="post" action="{{ url_for('auth.logout') }}">
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

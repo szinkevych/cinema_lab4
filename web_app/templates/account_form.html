@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Редагувати акаунт · Кінотеатр{% endblock %}
+
+{% macro field_error(name) %}
+    {% if form_errors.get(name) %}<div class="field-error">{{ form_errors[name] }}</div>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header">
+    <div><p class="eyebrow">ОСОБИСТИЙ КАБІНЕТ</p><h1>Редагувати акаунт</h1></div>
+    <a class="btn" href="{{ url_for('account.profile') }}">Назад до профілю</a>
+</div>
+
+<form method="post" class="panel form-panel" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {% for name, label, maxlength in [
+        ('username', 'Логін', 30),
+        ('first_name', "Ім'я", 50),
+        ('last_name', 'Прізвище', 50)
+    ] %}
+    <div class="form-group {{ 'has-error' if form_errors.get(name) }}">
+        <label for="{{ name }}">{{ label }} *</label>
+        <input type="text" id="{{ name }}" name="{{ name }}" maxlength="{{ maxlength }}"
+               value="{{ values.get(name, '') }}" required>
+        {{ field_error(name) }}
+    </div>
+    {% endfor %}
+    <div class="form-group {{ 'has-error' if form_errors.get('email') }}">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" maxlength="100"
+               value="{{ values.get('email', '') }}" required>
+        {{ field_error('email') }}
+    </div>
+    <div class="form-group {{ 'has-error' if form_errors.get('phone') }}">
+        <label for="phone">Телефон</label>
+        <input type="text" id="phone" name="phone" maxlength="25"
+               value="{{ values.get('phone', '') }}" placeholder="+380501234567">
+        <div class="hint">Необов'язково. Пробіли й дефіси можна використовувати.</div>
+        {{ field_error('phone') }}
+    </div>
+    <div class="form-actions">
+        <a class="btn" href="{{ url_for('account.profile') }}">Скасувати</a>
+        <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+    </div>
+</form>
+{% endblock %}

@@ -8,7 +8,7 @@
 {% block content %}
 <div class="panel form-panel auth-panel">
     <h1>Реєстрація глядача</h1>
-    <form method="post" novalidate style="margin-top:1rem">
+    <form method="post" novalidate data-validate-password="true" style="margin-top:1rem">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 
         <div class="form-group {{ 'has-error' if form_errors.get('username') }}">

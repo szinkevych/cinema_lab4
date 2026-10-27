@@ -1,43 +1,43 @@
 {% extends "base.html" %}
-{% block title %}{{ customer.first_name }} {{ customer.last_name }} · Кінотеатр{% endblock %}
+{% block title %}Головна · Кінотеатр{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
-    {% if current_user.role != 'customer' %}<div class="actions">
-        <a class="btn" href="{{ url_for('customers.list_customers') }}">← До списку</a>
-        <a class="btn btn-warning" href="{{ url_for('customers.edit_customer', customer_id=customer.customer_id) }}">Змінити</a>
-    </div>{% endif %}
-</div>
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">ВАШ НАСТУПНИЙ КІНОВЕЧІР</p>
+        <h1>Великі історії.<br><span>Великий екран.</span></h1>
+        <p>Обирайте фільм, знаходьте зручний сеанс і бронюйте найкращі місця.</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">Переглянути сеанси</a>
+            {% if not current_user %}<a class="btn btn-ghost" href="{{ url_for('auth.register') }}">Створити акаунт</a>{% endif %}
+        </div>
+    </div>
+    <div class="hero-mark" aria-hidden="true"><span>★</span><small>ВАШЕ МІСЦЕ<br>ВЖЕ ЧЕКАЄ</small></div>
+</section>
 
-<div class="cards">
-    <div class="card"><div class="card-value">{{ sold_count }}</div><div class="card-label">Активних квитків</div></div>
-    <div class="card"><div class="card-value">{{ total_spent | money }}</div><div class="card-label">Витрачено</div></div>
-    <div class="card"><div class="card-value" style="font-size:1rem">{{ customer.email }}</div><div class="card-label">Email</div></div>
-    <div class="card"><div class="card-value" style="font-size:1rem">{{ customer.phone or '—' }}</div><div class="card-label">Телефон</div></div>
+<div class="section-heading">
+    <div><p class="eyebrow">НЕ ПРОПУСТІТЬ</p><h2>Сеанси сьогодні</h2></div>
+    <a class="text-link" href="{{ url_for('screenings.list_screenings') }}">Увесь розклад <span aria-hidden="true">→</span></a>
 </div>
-
-<h2>Історія покупок</h2>
-{% if tickets %}
-<div class="table-wrap">
-    <table class="data-table">
-        <thead><tr><th>Квиток</th><th>Фільм</th><th>Зал</th><th>Початок</th><th>Місце</th><th>Ціна</th><th>Статус</th></tr></thead>
-        <tbody>
-        {% for t in tickets %}
-            <tr>
-                <td>№{{ t.ticket_id }}</td>
-                <td>{{ t.title }}</td>
-                <td>{{ t.hall }}</td>
-                <td>{{ t.start_time | dt }}</td>
-                <td>ряд {{ t.row_number }}, місце {{ t.seat_number }}</td>
-                <td>{{ t.price | money }}</td>
-                <td>{% if t.status == 'sold' %}<span class="badge badge-ok">діє</span>{% else %}<span class="badge badge-off">скасовано</span>{% endif %}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+{% if today %}
+<div class="screening-grid">
+    {% for screening in today %}
+    <article class="screening-card">
+        <div class="screening-card-top"><span class="badge badge-info">{{ screening.start_time | dt }}</span><span class="screening-hall">{{ screening.hall }}</span></div>
+        <h3>{{ screening.title }}</h3>
+        <div class="screening-meta">
+            <span>{{ screening.total_seats - screening.sold_seats }} вільних місць</span>
+            <span>{{ screening.occupancy_pct }}% заповнено</span>
+        </div>
+        {% if current_user %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('tickets.sell_tickets', screening_id=screening.screening_id) }}">{{ 'Обрати місця' if current_user.role == 'customer' else 'Перейти до квитків' }}</a>
+        {% else %}
+        <a class="btn btn-primary btn-block" href="{{ url_for('auth.login', next=url_for('tickets.sell_tickets', screening_id=screening.screening_id)) }}">Увійти для купівлі</a>
+        {% endif %}
+    </article>
+    {% endfor %}
 </div>
 {% else %}
-<div class="panel"><p class="muted">Покупок ще немає.</p></div>
+<div class="panel empty-state"><span class="empty-icon">◷</span><h3>На сьогодні сеансів більше немає</h3><p class="muted">Перегляньте розклад на наступні дні.</p><a class="btn btn-primary" href="{{ url_for('screenings.list_screenings') }}">Перейти до розкладу</a></div>
 {% endif %}
 {% endblock %}

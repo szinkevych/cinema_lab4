@@ -6,7 +6,7 @@
     <h1>{{ movie.title }}</h1>
     <div class="actions">
         <a class="btn" href="{{ url_for('movies.list_movies') }}">← До списку</a>
-        {% if current_user.role == 'admin' %}<a class="btn btn-warning" href="{{ url_for('movies.edit_movie', movie_id=movie.movie_id) }}">Змінити</a>{% endif %}
+        {% if current_user and current_user.role == 'admin' %}<a class="btn btn-warning" href="{{ url_for('movies.edit_movie', movie_id=movie.movie_id) }}">Змінити</a>{% endif %}
     </div>
 </div>
 

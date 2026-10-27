@@ -5,6 +5,7 @@
 ніж за годину) лежать в одному місці й однакові для будь-якого застосунку.
 """
 import re
+from datetime import timedelta
 from decimal import Decimal
 
 import psycopg2
@@ -107,9 +108,9 @@ def sell_tickets(screening_id):
                 with transaction() as cur:
                     ids = []
                     for row, seat in seats:
-                        cur.execute("SELECT sell_ticket(%s, %s, %s, %s, %s) AS ticket_id",
+                        cur.execute("CALL sell_ticket_proc(%s, %s, %s, %s, %s, NULL)",
                                     (screening_id, row, seat, customer_id, ticket_type))
-                        ids.append(cur.fetchone()["ticket_id"])
+                        ids.append(cur.fetchone()["p_ticket_id"])
                     cur.execute("SELECT SUM(price) AS total FROM tickets WHERE ticket_id = ANY(%s)",
                                 (ids,))
                     total = cur.fetchone()["total"]
@@ -150,9 +151,12 @@ def list_tickets():
     # Читаємо з представлення tickets_full (рівень 2)
     tickets = query_all(f"""
         SELECT tf.*,
+               m.duration_min,
                (tf.status = 'sold' AND tf.start_time > LOCALTIMESTAMP + INTERVAL '1 hour') AS cancelable
         FROM tickets_full tf
         JOIN tickets tt ON tt.ticket_id = tf.ticket_id
+        JOIN screenings s ON s.screening_id = tt.screening_id
+        JOIN movies m ON m.movie_id = s.movie_id
         WHERE (%(cid)s IS NULL OR tt.customer_id = %(cid)s)
           AND (%(status)s = '' OR tf.status = %(status)s)
           AND {when_sql}
@@ -160,6 +164,32 @@ def list_tickets():
         ORDER BY tf.purchased_at DESC, tf.ticket_id DESC
         LIMIT 300
     """, {"status": status, "q": q, "like": like, "cid": own_id})
+    now = query_one("SELECT LOCALTIMESTAMP AS now")["now"]
+    for ticket in tickets:
+        seconds_to_start = (ticket["start_time"] - now).total_seconds()
+        if seconds_to_start > 0:
+            if seconds_to_start < 3600:
+                ticket["time_state"] = "soon"
+                ticket["time_label"] = "Менше години до початку"
+            else:
+                total_minutes = int((seconds_to_start + 59) // 60)
+                days, remaining_minutes = divmod(total_minutes, 24 * 60)
+                hours, minutes = divmod(remaining_minutes, 60)
+                parts = []
+                if days:
+                    parts.append(f"{days} дн.")
+                if hours:
+                    parts.append(f"{hours} год.")
+                if minutes and not days:
+                    parts.append(f"{minutes} хв.")
+                ticket["time_state"] = "upcoming"
+                ticket["time_label"] = "До початку: " + " ".join(parts)
+        elif ticket["start_time"] + timedelta(minutes=ticket["duration_min"]) > now:
+            ticket["time_state"] = "ongoing"
+            ticket["time_label"] = "Сеанс триває"
+        else:
+            ticket["time_state"] = "past"
+            ticket["time_label"] = "Сеанс минув"
     total = sum(t["price"] for t in tickets if t["status"] == "sold")
     return render_template("tickets.html", tickets=tickets, total=total,
                            filters={"status": status, "when": when, "q": q})
@@ -173,7 +203,7 @@ def cancel_ticket(ticket_id):
             abort(403)
     try:
         with transaction() as cur:
-            cur.execute("SELECT cancel_ticket(%s)", (ticket_id,))
+            cur.execute("CALL cancel_ticket_proc(%s)", (ticket_id,))
         flash(f"Квиток №{ticket_id} скасовано, місце знову вільне.", "success")
     except psycopg2.errors.RaiseException as e:
         flash(e.diag.message_primary, "error")
